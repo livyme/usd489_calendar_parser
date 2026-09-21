@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hays USD 489 Closures</title>
+<style>
+  :root{
+    --maroon:#5c1a1a;
+    --maroon-dark:#3f1010;
+    --gold:#a68b46;
+    --cream:#faf7f0;
+    --paper:#ffffff;
+    --ink:#2a1e1e;
+    --muted:#8a7a6a;
+    --line:#e6ddc9;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family: Georgia, 'Times New Roman', serif;
+    background:var(--cream);
+    color:var(--ink);
+  }
+  .wrap{max-width:720px;margin:0 auto;padding:28px 20px 60px;}
+  header{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    border-bottom:3px solid var(--maroon);
+    padding-bottom:14px;
+    margin-bottom:18px;
+  }
+  h1{
+    font-size:1.5rem;
+    margin:0;
+    color:var(--maroon);
+    letter-spacing:0.01em;
+  }
+  .year{color:var(--muted);font-size:0.95rem;}
+
+  .next-box{
+    background:var(--maroon);
+    color:var(--cream);
+    border-radius:6px;
+    padding:16px 18px;
+    margin-bottom:14px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:12px;
+    min-height:64px;
+  }
+  .next-box .label{font-size:0.8rem;opacity:0.75;}
+  .next-box .title{font-size:1.15rem;margin-top:2px;}
+  .next-box .days{
+    font-size:1.6rem;
+    font-weight:bold;
+    color:var(--gold);
+    white-space:nowrap;
+    text-align:right;
+  }
+  .next-box .days span{font-size:0.75rem;display:block;font-weight:normal;color:var(--cream);opacity:0.8;}
+
+  .source-bar{
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center;
+    justify-content:space-between;
+    gap:8px 14px;
+    font-size:0.78rem;
+    color:var(--muted);
+    background:var(--paper);
+    border:1px solid var(--line);
+    border-radius:6px;
+    padding:9px 12px;
+    margin-bottom:18px;
+  }
+  .source-bar a{color:var(--maroon);}
+  .source-bar .stale{color:#9a3412;font-weight:bold;}
+  .bar-actions{display:flex;gap:8px;align-items:center;}
+  .btn{
+    display:inline-block;
+    padding:5px 11px;
+    border:1px solid var(--maroon);
+    border-radius:4px;
+    background:transparent;
+    color:var(--maroon);
+    text-decoration:none;
+    font-family:inherit;
+    font-size:0.78rem;
+    cursor:pointer;
+    white-space:nowrap;
+  }
+  .btn:hover:not(:disabled){background:var(--maroon);color:var(--cream);}
+  .btn:disabled{opacity:0.5;cursor:progress;}
+
+  .controls{
+    display:flex;
+    gap:8px;
+    margin-bottom:18px;
+    flex-wrap:wrap;
+  }
+  .controls input{
+    flex:1;
+    min-width:160px;
+    padding:9px 12px;
+    border:1px solid var(--line);
+    border-radius:4px;
+    font-family:inherit;
+    font-size:0.95rem;
+    background:var(--paper);
+  }
+  .controls button{
+    padding:9px 14px;
+    border:1px solid var(--line);
+    background:var(--paper);
+    border-radius:4px;
+    font-family:inherit;
+    font-size:0.9rem;
+    cursor:pointer;
+    color:var(--ink);
+  }
+  .controls button.active{
+    background:var(--maroon);
+    color:var(--cream);
+    border-color:var(--maroon);
+  }
+
+  .month-title{
+    font-size:0.78rem;
+    color:var(--gold);
+    text-transform:uppercase;
+    letter-spacing:0.08em;
+    border-bottom:1px solid var(--line);
+    padding:10px 2px 6px;
+    margin-top:18px;
+  }
+  .entry{
+    display:flex;
+    gap:14px;
+    padding:11px 2px;
+    border-bottom:1px solid var(--line);
+    align-items:flex-start;
+  }
+  .entry.past{opacity:0.4;}
+  .entry.today{
+    background:#f6ece2;
+    border-radius:6px;
+    box-shadow:inset 3px 0 0 var(--gold);
+    padding-left:8px;
+  }
+  .entry.today-marker{
+    background:#f6ece2;
+    border-radius:6px;
+    box-shadow:inset 3px 0 0 var(--gold);
+    padding-left:8px;
+    border-bottom:none;
+  }
+  .entry.today-marker .entry-title{font-style:italic;color:var(--muted);}
+  .date-badge{
+    flex:0 0 70px;
+    text-align:center;
+    color:var(--maroon);
+  }
+  .date-badge .wd{font-size:0.58rem;text-transform:uppercase;color:var(--muted);letter-spacing:0.02em;line-height:1.15;word-break:break-word;}
+  .date-badge .d{font-size:1.05rem;font-weight:bold;line-height:1.1;}
+  .date-badge .m{font-size:0.65rem;text-transform:uppercase;color:var(--muted);letter-spacing:0.05em;}
+  .today-pill{
+    display:inline-block;
+    margin-top:4px;
+    margin-left:6px;
+    font-size:0.65rem;
+    padding:2px 7px;
+    border-radius:10px;
+    background:var(--gold);
+    color:var(--maroon-dark);
+    text-transform:uppercase;
+    letter-spacing:0.04em;
+    vertical-align:middle;
+  }
+  .entry-body{flex:1;}
+  .entry-title{font-size:1rem;}
+  .entry-note{font-size:0.72rem;color:var(--muted);margin-top:2px;}
+  .entry-tag{
+    display:inline-block;
+    margin-top:4px;
+    font-size:0.7rem;
+    padding:2px 8px;
+    border-radius:10px;
+    text-transform:uppercase;
+    letter-spacing:0.04em;
+  }
+  .tag-holiday{background:#f1e4d4;color:#8a5a1a;}
+  .tag-inservice{background:#e6eef2;color:#2c5f78;}
+  .tag-conf{background:#f0e6f0;color:#6b3f6b;}
+  .tag-recess{background:#e5f0e3;color:#3a6b3a;}
+  .tag-milestone{background:#f6e8e8;color:var(--maroon);}
+
+  .empty,.loading{
+    text-align:center;
+    color:var(--muted);
+    padding:30px 0;
+    font-style:italic;
+  }
+  .error{
+    background:#fdf3f3;
+    border:1px solid #e7c9c9;
+    color:#8a2a2a;
+    border-radius:6px;
+    padding:12px 14px;
+    margin-bottom:18px;
+    font-size:0.85rem;
+  }
+  .error code{
+    font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+    font-size:0.8rem;
+    word-break:break-all;
+  }
+  .notes,.subscribe{
+    margin-top:26px;
+    padding:12px 14px;
+    background:var(--paper);
+    border:1px solid var(--line);
+    border-radius:6px;
+    font-size:0.82rem;
+    color:var(--muted);
+  }
+  .notes h2,.subscribe h2{
+    font-size:0.72rem;
+    text-transform:uppercase;
+    letter-spacing:0.08em;
+    color:var(--gold);
+    margin:0 0 6px;
+  }
+  .notes ul{margin:0;padding-left:18px;}
+  .subscribe p{margin:0 0 6px;}
+
+  .about{
+    margin-top:18px;
+    padding:12px 14px;
+    background:var(--paper);
+    border:1px solid var(--line);
+    border-radius:6px;
+    font-size:0.82rem;
+    color:var(--muted);
+  }
+  .about > summary{
+    cursor:pointer;
+    font-size:0.72rem;
+    text-transform:uppercase;
+    letter-spacing:0.08em;
+    color:var(--gold);
+    list-style:none;
+  }
+  .about > summary::-webkit-details-marker{display:none;}
+  .about > summary::before{content:"\25B8  ";}
+  .about[open] > summary::before{content:"\25BE  ";}
+  .about[open] > summary{margin-bottom:10px;}
+  .about h3{
+    font-size:0.8rem;
+    color:var(--ink);
+    margin:14px 0 6px;
+  }
+  .about h3:first-of-type{margin-top:4px;}
+  .about ol,.about ul{margin:0;padding-left:20px;}
+  .about li{margin-bottom:5px;line-height:1.45;}
+  .about strong{color:var(--ink);}
+  .about a{color:var(--maroon);}
+  .about code{
+    font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+    font-size:0.76rem;
+    background:#f3ece0;
+    border-radius:3px;
+    padding:1px 5px;
+    word-break:break-word;
+    color:var(--ink);
+  }
+  .about-foot{
+    margin:14px 0 0;
+    padding-top:10px;
+    border-top:1px solid var(--line);
+    font-style:italic;
+    font-size:0.78rem;
+  }
+  .subscribe code{
+    font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+    font-size:0.78rem;
+    background:#f3ece0;
+    border-radius:3px;
+    padding:2px 6px;
+    word-break:break-all;
+    color:var(--ink);
+  }
+  footer{
+    text-align:center;
+    margin-top:30px;
+    color:var(--muted);
+    font-size:0.78rem;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Hays USD 489 Closures</h1>
+    <span class="year" id="yearLabel"></span>
+  </header>
+
+  <div id="errorSlot"></div>
+
+  <div class="next-box" id="nextBox"></div>
+
+  <div class="source-bar">
+    <span id="sourceInfo">Loading&hellip;</span>
+    <span class="bar-actions">
+      <a class="btn" id="icsBtn" href="/calendar.ics">&#128197; Subscribe</a>
+      <button class="btn" id="refreshBtn" title="Re-download the district PDF and re-parse it">&#8635; Refresh</button>
+    </span>
+  </div>
+
+  <div class="controls">
+    <input type="text" id="search" placeholder="Search (e.g. spring break, inservice)">
+    <button data-filter="all" class="active">All</button>
+    <button data-filter="upcoming">Upcoming</button>
+  </div>
+
+  <div id="list"><div class="loading">Loading calendar&hellip;</div></div>
+
+  <div class="notes" id="notes" hidden></div>
+
+  <div class="subscribe">
+    <h2>Subscribe on your phone</h2>
+    <p>Add this URL as a subscribed calendar (iOS: Calendar &rarr; Add Calendar &rarr; Add Subscription Calendar):</p>
+    <p><code id="webcalUrl"></code></p>
+  </div>
+
+  <details class="about" id="about" open>
+    <summary>How this page is built, and how it treats the district's website</summary>
+
+    <h3>Where the dates come from</h3>
+    <ol>
+      <li>Fetch the <a id="aboutHome" href="https://www.usd489.com/" target="_blank" rel="noopener">usd489.com</a> homepage and read the site's own navigation menu, which is embedded in the page as JSON.</li>
+      <li>Pick the nav entry that looks like the district calendar &mdash; preferring one named &ldquo;district&rdquo; with the latest school year, and skipping the BOE meeting calendar. It currently resolves <span id="aboutLabel">that link</span>.</li>
+      <li>Follow it to the calendar PDF the district hosts on Thrillshare, and confirm the response really is a PDF.</li>
+      <li>Read the <strong>legend column</strong> down the right-hand side of the PDF &mdash; the <em>&ldquo;17-NO SCHOOL Teacher Inservice&rdquo;</em> list &mdash; rather than the month grids. The legend is plain text in reading order; the grids are bare day numbers whose meaning is carried only by colour fill, so they'd break far more easily.</li>
+      <li>Expand day ranges into individual dates, sort them, and hand the result to this page as JSON. Nothing here is typed in by hand &mdash; if the district changes the PDF, a refresh picks it up.</li>
+    </ol>
+
+    <h3>How it stays a good citizen of usd489.com</h3>
+    <ul>
+      <li><strong>It obeys robots.txt.</strong> The district allows crawling of <code>/</code> for every agent and disallows only <code>/api/</code>. This reads exactly one page &mdash; the homepage &mdash; and never touches <code>/api/</code>.</li>
+      <li><strong>It identifies itself honestly.</strong> Requests are sent as
+        <code id="aboutUa">usd489-calendar-bot/1.0</code>, not disguised as a browser or a search engine. The site is behind a bot challenge that turns away anything claiming to be a browser; rather than working around that by impersonating Chrome, this asks for the content as what it actually is, which is the path the district's own robots.txt permits.</li>
+      <li><strong>It almost never asks.</strong> Loading this page sends <em>zero</em> requests to usd489.com &mdash; you're reading a cached copy. The district's site is contacted only when someone presses <strong>Refresh</strong>: no polling, no timer, no fetch per visitor. A school calendar is published once and rarely changes, so in practice that's a couple of requests a year.</li>
+      <li><strong>Two requests per refresh, one at a time.</strong> A refresh fetches the homepage and then the PDF &mdash; nothing else, no spidering of other pages. Concurrent refreshes are locked out, so repeated clicking can't pile requests onto the site.</li>
+      <li><strong>It never republishes their file.</strong> The PDF isn't mirrored here; the link above points at the district's own copy, so they stay the source of record.</li>
+    </ul>
+
+    <p class="about-foot">This is an unofficial personal project and not affiliated with or endorsed by Hays USD 489. The district's PDF is always authoritative &mdash; if something here disagrees with it, <a id="aboutPdfLink" href="https://www.usd489.com/" target="_blank" rel="noopener">trust the PDF</a>.</p>
+  </details>
+
+  <footer>#EveryStudentEveryDay489 &middot; <span id="footerSource">Source: USD 489 district calendar</span></footer>
+</div>
+
+<script>
+const tagLabels = {
+  holiday:"No School", inservice:"No School — Inservice", conf:"No School — P/T Conf",
+  recess:"No School — Recess", milestone:"School Milestone"
+};
+
+const today = new Date(); today.setHours(0,0,0,0);
+const monthFmt = d => d.toLocaleString('en-US',{month:'long'});
+const dayFmt   = d => d.getDate();
+const monAbbr  = d => d.toLocaleString('en-US',{month:'short'});
+const wdAbbr   = d => d.toLocaleString('en-US',{weekday:'long'});
+const isSameDay = (a,b) => a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate();
+const daysBetween = (a,b) => Math.round((b-a)/86400000);
+const parseDate = s => new Date(s+"T00:00:00");
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+let state = { data:null, filter:'all', query:'' };
+
+function label(e){ return tagLabels[e.tag] || (e.noSchool ? 'No School' : 'Note'); }
+
+function rangeLabel(e){
+  if(!e.range) return '';
+  const [a,b] = e.range.split('/').map(parseDate);
+  return a.getMonth()===b.getMonth()
+    ? `${monAbbr(a)} ${dayFmt(a)}–${dayFmt(b)}`
+    : `${monAbbr(a)} ${dayFmt(a)} – ${monAbbr(b)} ${dayFmt(b)}`;
+}
+
+function renderList(){
+  const list = document.getElementById('list');
+  const events = state.data ? state.data.events : [];
+  const q = state.query.toLowerCase().trim();
+  list.innerHTML = '';
+
+  let filtered = events.filter(e=>{
+    const d = parseDate(e.date);
+    if(state.filter==='upcoming' && d < today) return false;
+    if(q && !(e.title.toLowerCase().includes(q) || label(e).toLowerCase().includes(q))) return false;
+    return true;
+  }).map(e=>({...e, d:parseDate(e.date)}));
+
+  const hasToday = filtered.some(e=>isSameDay(e.d, today));
+  if(!hasToday && (!q || 'today no closure'.includes(q))){
+    filtered.push({date: today.toISOString().slice(0,10), d: new Date(today), title:"Today — no closure", tag:null, marker:true});
+  }
+  filtered.sort((a,b)=>a.d-b.d);
+
+  if(filtered.length===0){
+    list.innerHTML = '<div class="empty">No matching dates.</div>';
+    return;
+  }
+
+  let lastMonthKey = '';
+  filtered.forEach(e=>{
+    const d = e.d;
+    const monthKey = d.getFullYear()+'-'+d.getMonth();
+    if(monthKey !== lastMonthKey){
+      const h = document.createElement('div');
+      h.className = 'month-title';
+      h.textContent = monthFmt(d)+' '+d.getFullYear();
+      list.appendChild(h);
+      lastMonthKey = monthKey;
+    }
+    const isToday = isSameDay(d, today);
+    const badge = `<div class="date-badge"><div class="wd">${wdAbbr(d)}</div><div class="d">${dayFmt(d)}</div><div class="m">${monAbbr(d)}</div></div>`;
+    const row = document.createElement('div');
+
+    if(e.marker){
+      row.className = 'entry today-marker';
+      row.innerHTML = `${badge}
+        <div class="entry-body">
+          <div class="entry-title">${esc(e.title)}<span class="today-pill">Today</span></div>
+        </div>`;
+      list.appendChild(row);
+      return;
+    }
+
+    const span = rangeLabel(e);
+    row.className = 'entry' + (d < today ? ' past':'') + (isToday ? ' today':'');
+    row.innerHTML = `${badge}
+      <div class="entry-body">
+        <div class="entry-title">${esc(e.title)}${isToday ? '<span class="today-pill">Today</span>' : ''}</div>
+        ${span ? `<div class="entry-note">Part of ${esc(span)}</div>` : ''}
+        <span class="entry-tag tag-${esc(e.tag)}">${esc(label(e))}</span>
+      </div>`;
+    list.appendChild(row);
+  });
+}
+
+function renderNext(){
+  const box = document.getElementById('nextBox');
+  const events = state.data ? state.data.events : [];
+  const upcoming = events
+    .filter(e=> e.noSchool)
+    .map(e=>({...e, d:parseDate(e.date)}))
+    .filter(e=> e.d >= today)
+    .sort((a,b)=>a.d-b.d);
+
+  if(upcoming.length===0){
+    box.innerHTML = `<div><div class="label">All closures have passed</div><div class="title">Enjoy the rest of the year</div></div>`;
+    return;
+  }
+  const next = upcoming[0];
+  const diff = daysBetween(today, next.d);
+  const span = rangeLabel(next);
+  box.innerHTML = `
+    <div>
+      <div class="label">Next closure${span ? ' · '+esc(span) : ''}</div>
+      <div class="title">${esc(next.title)}</div>
+    </div>
+    <div class="days">${diff===0?'Today':diff}<span>${diff===0?'':(diff===1?'day away':'days away')}</span></div>`;
+}
+
+function renderSource(){
+  const info = document.getElementById('sourceInfo');
+  const meta = (state.data && state.data.meta) || {};
+  if(!meta.retrievedAt){ info.textContent = 'Source information unavailable.'; return; }
+
+  const fetched = new Date(meta.retrievedAt);
+  const ageDays = Math.floor((Date.now()-fetched.getTime())/86400000);
+  const when = fetched.toLocaleString('en-US',{dateStyle:'medium', timeStyle:'short'});
+  const ageText = ageDays === 0 ? 'today' : ageDays === 1 ? '1 day ago' : ageDays+' days ago';
+  const stale = ageDays >= 120 ? ' class="stale"' : '';
+
+  const parts = [`PDF retrieved <span${stale}>${esc(when)}</span> (${esc(ageText)})`];
+  if(meta.pdfLastModified){
+    const lm = new Date(meta.pdfLastModified);
+    if(!isNaN(lm)) parts.push(`district last updated it ${lm.toLocaleDateString('en-US',{dateStyle:'medium'})}`);
+  }
+  if(meta.pdfUrl) parts.push(`<a href="${esc(meta.pdfUrl)}" target="_blank" rel="noopener">view source PDF</a>`);
+  info.innerHTML = parts.join(' &middot; ');
+}
+
+function renderNotes(){
+  const el = document.getElementById('notes');
+  const notes = (state.data && state.data.notes) || [];
+  if(!notes.length){ el.hidden = true; return; }
+  el.hidden = false;
+  el.innerHTML = '<h2>Also noted on the calendar</h2><ul>' +
+    notes.map(n=>`<li>${esc(n)}</li>`).join('') + '</ul>';
+}
+
+function renderMeta(){
+  const year = (state.data && state.data.schoolYear) || '';
+  document.getElementById('yearLabel').textContent = year;
+  document.getElementById('footerSource').textContent =
+    year ? `Source: District ${year} Calendar` : 'Source: USD 489 district calendar';
+
+  const icsUrl = new URL('/calendar.ics', location.href);
+  document.getElementById('webcalUrl').textContent =
+    icsUrl.href.replace(/^https?:/, 'webcal:');
+}
+
+function showError(message){
+  document.getElementById('errorSlot').innerHTML =
+    `<div class="error">${esc(message)}</div>`;
+}
+function clearError(){ document.getElementById('errorSlot').innerHTML = ''; }
+
+function renderAbout(){
+  const meta = (state.data && state.data.meta) || {};
+  if(meta.userAgent){
+    document.getElementById('aboutUa').textContent = meta.userAgent;
+  }
+  if(meta.sourcePage){
+    const a = document.getElementById('aboutHome');
+    a.href = meta.sourcePage;
+    a.textContent = meta.sourcePage.replace(/^https?:\/\//,'').replace(/\/$/,'');
+  }
+  const label = document.getElementById('aboutLabel');
+  if(meta.linkLabel && meta.pdfUrl){
+    label.innerHTML = `to <strong>${esc(meta.linkLabel)}</strong>`;
+  }else{
+    label.textContent = 'that link';
+  }
+  if(meta.pdfUrl){
+    document.getElementById('aboutPdfLink').href = meta.pdfUrl;
+  }
+}
+
+function renderAll(){
+  renderMeta();
+  renderSource();
+  renderNext();
+  renderNotes();
+  renderAbout();
+  renderList();
+}
+
+async function loadCalendar(){
+  try{
+    const resp = await fetch('/api/calendar', {headers:{'Accept':'application/json'}});
+    const body = await resp.json();
+    if(!resp.ok) throw new Error(body.error || `HTTP ${resp.status}`);
+    state.data = body;
+    clearError();
+    renderAll();
+  }catch(err){
+    document.getElementById('list').innerHTML =
+      '<div class="empty">Could not load the calendar.</div>';
+    document.getElementById('nextBox').innerHTML =
+      `<div><div class="label">Unavailable</div><div class="title">No calendar data</div></div>`;
+    document.getElementById('sourceInfo').textContent = '';
+    showError(`Could not load calendar data: ${err.message}`);
+  }
+}
+
+async function doRefresh(){
+  const btn = document.getElementById('refreshBtn');
+  const original = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = 'Refreshing&hellip;';
+  try{
+    const resp = await fetch('/api/refresh', {method:'POST', headers:{'Accept':'application/json'}});
+    const body = await resp.json();
+    if(!resp.ok) throw new Error(body.error || `HTTP ${resp.status}`);
+    state.data = body;
+    clearError();
+    renderAll();
+  }catch(err){
+    showError(`Refresh failed: ${err.message} — still showing the previously cached calendar.`);
+  }finally{
+    btn.disabled = false;
+    btn.innerHTML = original;
+  }
+}
+
+document.querySelectorAll('.controls button').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.controls button').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    state.filter = btn.dataset.filter;
+    renderList();
+  });
+});
+document.getElementById('search').addEventListener('input', e=>{
+  state.query = e.target.value;
+  renderList();
+});
+document.getElementById('refreshBtn').addEventListener('click', doRefresh);
+
+renderMeta();
+loadCalendar();
+</script>
+</body>
+</html>

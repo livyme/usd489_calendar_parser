@@ -1,0 +1,16 @@
+# Deploy with: kubectl apply -k k8s/
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: l-usd489-calendar
+resources:
+  - deployment.yaml
+  - service.yaml
+labels:
+  - pairs:
+      app.kubernetes.io/name: usd489-calendar
+# The image tag is pinned here rather than in deployment.yaml, and is bumped
+# automatically by .github/workflows/build-image.yml after it publishes a new
+# tagged image. Edit by hand only to roll back to an older version.
+images:
+  - name: ghcr.io/livyme/usd489_calendar_parser
+    newTag: latest

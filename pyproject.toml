@@ -1,0 +1,11 @@
+[project]
+name = "hays-usd-489-calendar"
+version = "0.1.0"
+description = "Crawl usd489.com for the district calendar PDF and render it as a closures page"
+requires-python = ">=3.14"
+dependencies = [
+    "pdfplumber>=0.11",
+]
+
+[tool.uv]
+package = false

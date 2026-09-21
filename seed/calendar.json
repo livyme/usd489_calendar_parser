@@ -1,0 +1,318 @@
+{
+  "schoolYear": "2026\u20132027",
+  "events": [
+    {
+      "date": "2026-08-17",
+      "title": "Teacher Inservice",
+      "tag": "inservice",
+      "noSchool": true
+    },
+    {
+      "date": "2026-08-18",
+      "title": "Teacher Inservice",
+      "tag": "inservice",
+      "noSchool": true
+    },
+    {
+      "date": "2026-08-19",
+      "title": "First Day of School (Full Day HMS/HHS\u20141/2 Day Elementary)",
+      "tag": "milestone",
+      "noSchool": false
+    },
+    {
+      "date": "2026-09-07",
+      "title": "Labor Day",
+      "tag": "holiday",
+      "noSchool": true
+    },
+    {
+      "date": "2026-09-14",
+      "title": "Teacher Inservice",
+      "tag": "inservice",
+      "noSchool": true
+    },
+    {
+      "date": "2026-10-12",
+      "title": "Teacher Inservice",
+      "tag": "inservice",
+      "noSchool": true
+    },
+    {
+      "date": "2026-10-29",
+      "title": "P/T Conf",
+      "tag": "conf",
+      "noSchool": true,
+      "range": "2026-10-29/2026-10-30"
+    },
+    {
+      "date": "2026-10-30",
+      "title": "P/T Conf",
+      "tag": "conf",
+      "noSchool": true,
+      "range": "2026-10-29/2026-10-30"
+    },
+    {
+      "date": "2026-11-02",
+      "title": "Teacher Inservice",
+      "tag": "inservice",
+      "noSchool": true
+    },
+    {
+      "date": "2026-11-25",
+      "title": "Fall Recess",
+      "tag": "recess",
+      "noSchool": true,
+      "range": "2026-11-25/2026-11-27"
+    },
+    {
+      "date": "2026-11-26",
+      "title": "Fall Recess",
+      "tag": "recess",
+      "noSchool": true,
+      "range": "2026-11-25/2026-11-27"
+    },
+    {
+      "date": "2026-11-27",
+      "title": "Fall Recess",
+      "tag": "recess",
+      "noSchool": true,
+      "range": "2026-11-25/2026-11-27"
+    },
+    {
+      "date": "2026-12-21",
+      "title": "Winter Recess",
+      "tag": "recess",
+      "noSchool": true,
+      "range": "2026-12-21/2026-12-31"
+    },
+    {
+      "date": "2026-12-22",
+      "title": "Winter Recess",
+      "tag": "recess",
+      "noSchool": true,
+      "range": "2026-12-21/2026-12-31"
+    },
+    {
+      "date": "2026-12-23",
+      "title": "Winter Recess",
+      "tag": "recess",
+      "noSchool": true,
+      "range": "2026-12-21/2026-12-31"
+    },
+    {
+      "date": "2026-12-24",
+      "title": "Winter Recess",
+      "tag": "recess",
+      "noSchool": true,
+      "range": "2026-12-21/2026-12-31"
+    },
+    {
+      "date": "2026-12-25",
+      "title": "Winter Recess",
+      "tag": "recess",
+      "noSchool": true,
+      "range": "2026-12-21/2026-12-31"
+    },
+    {
+      "date": "2026-12-26",
+      "title": "Winter Recess",
+      "tag": "recess",
+      "noSchool": true,
+      "range": "2026-12-21/2026-12-31"
+    },
+    {
+      "date": "2026-12-27",
+      "title": "Winter Recess",
+      "tag": "recess",
+      "noSchool": true,
+      "range": "2026-12-21/2026-12-31"
+    },
+    {
+      "date": "2026-12-28",
+      "title": "Winter Recess",
+      "tag": "recess",
+      "noSchool": true,
+      "range": "2026-12-21/2026-12-31"
+    },
+    {
+      "date": "2026-12-29",
+      "title": "Winter Recess",
+      "tag": "recess",
+      "noSchool": true,
+      "range": "2026-12-21/2026-12-31"
+    },
+    {
+      "date": "2026-12-30",
+      "title": "Winter Recess",
+      "tag": "recess",
+      "noSchool": true,
+      "range": "2026-12-21/2026-12-31"
+    },
+    {
+      "date": "2026-12-31",
+      "title": "Winter Recess",
+      "tag": "recess",
+      "noSchool": true,
+      "range": "2026-12-21/2026-12-31"
+    },
+    {
+      "date": "2027-01-01",
+      "title": "Winter Recess",
+      "tag": "recess",
+      "noSchool": true,
+      "range": "2027-01-01/2027-01-04"
+    },
+    {
+      "date": "2027-01-02",
+      "title": "Winter Recess",
+      "tag": "recess",
+      "noSchool": true,
+      "range": "2027-01-01/2027-01-04"
+    },
+    {
+      "date": "2027-01-03",
+      "title": "Winter Recess",
+      "tag": "recess",
+      "noSchool": true,
+      "range": "2027-01-01/2027-01-04"
+    },
+    {
+      "date": "2027-01-04",
+      "title": "Teacher Inservice",
+      "tag": "inservice",
+      "noSchool": true
+    },
+    {
+      "date": "2027-01-04",
+      "title": "Winter Recess",
+      "tag": "recess",
+      "noSchool": true,
+      "range": "2027-01-01/2027-01-04"
+    },
+    {
+      "date": "2027-01-05",
+      "title": "Students return to school",
+      "tag": "milestone",
+      "noSchool": false
+    },
+    {
+      "date": "2027-01-18",
+      "title": "No School",
+      "tag": "holiday",
+      "noSchool": true
+    },
+    {
+      "date": "2027-02-15",
+      "title": "Teacher Inservice",
+      "tag": "inservice",
+      "noSchool": true
+    },
+    {
+      "date": "2027-03-15",
+      "title": "Spring Break",
+      "tag": "recess",
+      "noSchool": true,
+      "range": "2027-03-15/2027-03-19"
+    },
+    {
+      "date": "2027-03-16",
+      "title": "Spring Break",
+      "tag": "recess",
+      "noSchool": true,
+      "range": "2027-03-15/2027-03-19"
+    },
+    {
+      "date": "2027-03-17",
+      "title": "Spring Break",
+      "tag": "recess",
+      "noSchool": true,
+      "range": "2027-03-15/2027-03-19"
+    },
+    {
+      "date": "2027-03-18",
+      "title": "Spring Break",
+      "tag": "recess",
+      "noSchool": true,
+      "range": "2027-03-15/2027-03-19"
+    },
+    {
+      "date": "2027-03-19",
+      "title": "Spring Break",
+      "tag": "recess",
+      "noSchool": true,
+      "range": "2027-03-15/2027-03-19"
+    },
+    {
+      "date": "2027-03-26",
+      "title": "P/T Conf",
+      "tag": "conf",
+      "noSchool": true,
+      "range": "2027-03-26/2027-03-29"
+    },
+    {
+      "date": "2027-03-27",
+      "title": "P/T Conf",
+      "tag": "conf",
+      "noSchool": true,
+      "range": "2027-03-26/2027-03-29"
+    },
+    {
+      "date": "2027-03-28",
+      "title": "P/T Conf",
+      "tag": "conf",
+      "noSchool": true,
+      "range": "2027-03-26/2027-03-29"
+    },
+    {
+      "date": "2027-03-29",
+      "title": "P/T Conf",
+      "tag": "conf",
+      "noSchool": true,
+      "range": "2027-03-26/2027-03-29"
+    },
+    {
+      "date": "2027-04-12",
+      "title": "Teacher Inservice",
+      "tag": "inservice",
+      "noSchool": true
+    },
+    {
+      "date": "2027-05-03",
+      "title": "Teacher Inservice",
+      "tag": "inservice",
+      "noSchool": true
+    },
+    {
+      "date": "2027-05-16",
+      "title": "HHS Graduation",
+      "tag": "milestone",
+      "noSchool": false
+    },
+    {
+      "date": "2027-05-20",
+      "title": "Last Day of School (Full Day HMS/HHS)",
+      "tag": "milestone",
+      "noSchool": false
+    },
+    {
+      "date": "2027-05-21",
+      "title": "Last Day of School (Half Day Elementary School)",
+      "tag": "milestone",
+      "noSchool": false
+    }
+  ],
+  "notes": [
+    "Floating Workday for teachers Dec 21-Jan 3"
+  ],
+  "meta": {
+    "retrievedAt": "2026-09-21T16:21:07+00:00",
+    "linkLabel": "2026-2027 District Calendar",
+    "sourcePage": "https://www.usd489.com/",
+    "shortUrl": "https://aptg.co/LkvZmJ",
+    "pdfUrl": "https://files-backend.assets.thrillshare.com/documents/asset/uploaded_file/1196/Usd_489/add6adf1-dfe0-4cd7-b56a-2671c0e8bcee/District-Calendar--%284%29.pdf?disposition=inline",
+    "pdfLastModified": "Tue, 19 May 2026 18:03:28 GMT",
+    "pdfBytes": 746881,
+    "userAgent": "usd489-calendar-bot/1.0 (+personal school-closure calendar)",
+    "requestCount": 2
+  }
+}

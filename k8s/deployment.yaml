@@ -1,0 +1,96 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: usd489-calendar
+  labels:
+    app: usd489-calendar
+spec:
+  # Deliberately 1. Refresh is manual and per-pod: the parsed calendar lives in
+  # each pod's memory and its own /data cache, so with 2+ replicas a click on
+  # Refresh would only update whichever pod served that request, and the page
+  # would appear to flip between fresh and stale. The district publishes the
+  # calendar once a year, so a single replica is the right trade.
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: usd489-calendar
+  template:
+    metadata:
+      labels:
+        app: usd489-calendar
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: calendar
+          # Built and pushed by .github/workflows/build-image.yml on a v* tag.
+          # The tag here is only a fallback for `kubectl apply -f`; applying
+          # with `-k` overrides it with the version pinned in kustomization.yaml.
+          image: ghcr.io/livyme/usd489_calendar_parser:latest
+          # Release tags are immutable, so there is nothing to re-pull once a
+          # version is cached.
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8489
+          env:
+            - name: PORT
+              value: "8489"
+            - name: CACHE_DIR
+              value: /data
+          # Startup does no network I/O -- it loads the seed baked into the
+          # image -- so the pod is ready almost immediately and stays servable
+          # even when usd489.com is unreachable.
+          startupProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            periodSeconds: 2
+            failureThreshold: 15
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 3
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 20
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            # Measured: ~18Mi idle, ~43Mi peak while parsing the PDF on refresh.
+            requests:
+              cpu: 25m
+              memory: 64Mi
+            limits:
+              # No CPU limit: parsing is a brief burst on manual refresh only,
+              # and throttling it would just make the button feel slow.
+              memory: 192Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        # Refresh writes here. An emptyDir is enough: if the pod is replaced,
+        # startup falls back to the seed baked into the image, which for a
+        # school calendar is almost always still correct.
+        - name: data
+          emptyDir: {}
+        - name: tmp
+          emptyDir: {}

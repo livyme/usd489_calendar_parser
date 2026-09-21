@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Hays USD 489 Closures</title>
+<style>
+  :root{
+    --maroon:#5c1a1a;
+    --maroon-dark:#3f1010;
+    --gold:#a68b46;
+    --cream:#faf7f0;
+    --paper:#ffffff;
+    --ink:#2a1e1e;
+    --muted:#8a7a6a;
+    --line:#e6ddc9;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family: Georgia, 'Times New Roman', serif;
+    background:var(--cream);
+    color:var(--ink);
+  }
+  .wrap{max-width:720px;margin:0 auto;padding:28px 20px 60px;}
+  header{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    border-bottom:3px solid var(--maroon);
+    padding-bottom:14px;
+    margin-bottom:18px;
+  }
+  h1{
+    font-size:1.5rem;
+    margin:0;
+    color:var(--maroon);
+    letter-spacing:0.01em;
+  }
+  .year{color:var(--muted);font-size:0.95rem;}
+
+  .next-box{
+    background:var(--maroon);
+    color:var(--cream);
+    border-radius:6px;
+    padding:16px 18px;
+    margin-bottom:22px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:12px;
+  }
+  .next-box .label{font-size:0.8rem;opacity:0.75;text-transform:none;}
+  .next-box .title{font-size:1.15rem;margin-top:2px;}
+  .next-box .days{
+    font-size:1.6rem;
+    font-weight:bold;
+    color:var(--gold);
+    white-space:nowrap;
+  }
+  .next-box .days span{font-size:0.75rem;display:block;font-weight:normal;color:var(--cream);opacity:0.8;}
+
+  .controls{
+    display:flex;
+    gap:8px;
+    margin-bottom:18px;
+    flex-wrap:wrap;
+  }
+  .controls input{
+    flex:1;
+    min-width:160px;
+    padding:9px 12px;
+    border:1px solid var(--line);
+    border-radius:4px;
+    font-family:inherit;
+    font-size:0.95rem;
+    background:var(--paper);
+  }
+  .controls button{
+    padding:9px 14px;
+    border:1px solid var(--line);
+    background:var(--paper);
+    border-radius:4px;
+    font-family:inherit;
+    font-size:0.9rem;
+    cursor:pointer;
+    color:var(--ink);
+  }
+  .controls button.active{
+    background:var(--maroon);
+    color:var(--cream);
+    border-color:var(--maroon);
+  }
+
+  .month{margin-bottom:8px;}
+  .month-title{
+    font-size:0.78rem;
+    color:var(--gold);
+    text-transform:uppercase;
+    letter-spacing:0.08em;
+    border-bottom:1px solid var(--line);
+    padding:10px 2px 6px;
+    margin-top:18px;
+  }
+  .entry{
+    display:flex;
+    gap:14px;
+    padding:11px 2px;
+    border-bottom:1px solid var(--line);
+    align-items:flex-start;
+  }
+  .entry.past{opacity:0.4;}
+  .entry.today{
+    background:#f6ece2;
+    border-radius:6px;
+    box-shadow:inset 3px 0 0 var(--gold);
+    padding-left:8px;
+  }
+  .entry.today-marker{
+    background:#f6ece2;
+    border-radius:6px;
+    box-shadow:inset 3px 0 0 var(--gold);
+    padding-left:8px;
+    border-bottom:none;
+  }
+  .entry.today-marker .entry-title{font-style:italic;color:var(--muted);}
+  .date-badge{
+    flex:0 0 70px;
+    text-align:center;
+    color:var(--maroon);
+  }
+  .date-badge .wd{font-size:0.58rem;text-transform:uppercase;color:var(--muted);letter-spacing:0.02em;line-height:1.15;word-break:break-word;}
+  .date-badge .d{font-size:1.05rem;font-weight:bold;line-height:1.1;}
+  .date-badge .m{font-size:0.65rem;text-transform:uppercase;color:var(--muted);letter-spacing:0.05em;}
+  .today-pill{
+    display:inline-block;
+    margin-top:4px;
+    margin-left:6px;
+    font-size:0.65rem;
+    padding:2px 7px;
+    border-radius:10px;
+    background:var(--gold);
+    color:var(--maroon-dark);
+    text-transform:uppercase;
+    letter-spacing:0.04em;
+    vertical-align:middle;
+  }
+  .entry-body{flex:1;}
+  .entry-title{font-size:1rem;}
+  .entry-tag{
+    display:inline-block;
+    margin-top:4px;
+    font-size:0.7rem;
+    padding:2px 8px;
+    border-radius:10px;
+    text-transform:uppercase;
+    letter-spacing:0.04em;
+  }
+  .tag-holiday{background:#f1e4d4;color:#8a5a1a;}
+  .tag-inservice{background:#e6eef2;color:#2c5f78;}
+  .tag-conf{background:#f0e6f0;color:#6b3f6b;}
+  .tag-recess{background:#e5f0e3;color:#3a6b3a;}
+  .tag-milestone{background:#f6e8e8;color:var(--maroon);}
+
+  .empty{
+    text-align:center;
+    color:var(--muted);
+    padding:30px 0;
+    font-style:italic;
+  }
+  footer{
+    text-align:center;
+    margin-top:30px;
+    color:var(--muted);
+    font-size:0.78rem;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Hays USD 489 Closures</h1>
+    <span class="year">2026&ndash;2027</span>
+  </header>
+
+  <div class="next-box" id="nextBox"></div>
+
+  <div class="controls">
+    <input type="text" id="search" placeholder="Search (e.g. spring break, inservice)">
+    <button data-filter="all" class="active">All</button>
+    <button data-filter="upcoming">Upcoming</button>
+  </div>
+
+  <div id="list"></div>
+
+  <footer>#EveryStudentEveryDay489 &middot; Source: District 2026&ndash;2027 Calendar</footer>
+</div>
+
+<script>
+const events = [
+  {date:"2026-08-17", title:"Teacher Inservice", tag:"inservice"},
+  {date:"2026-08-18", title:"Teacher Inservice", tag:"inservice"},
+  {date:"2026-08-19", title:"First Day of School (Full Day HMS/HHS — 1/2 Day Elementary)", tag:"milestone", noSchool:false},
+  {date:"2026-09-07", title:"Labor Day", tag:"holiday"},
+  {date:"2026-09-14", title:"Teacher Inservice", tag:"inservice"},
+  {date:"2026-10-12", title:"Teacher Inservice", tag:"inservice"},
+  {date:"2026-10-29", title:"Parent/Teacher Conferences", tag:"conf"},
+  {date:"2026-10-30", title:"Parent/Teacher Conferences", tag:"conf"},
+  {date:"2026-11-02", title:"Teacher Inservice", tag:"inservice"},
+  {date:"2026-11-25", title:"Fall Recess", tag:"recess"},
+  {date:"2026-11-26", title:"Fall Recess", tag:"recess"},
+  {date:"2026-11-27", title:"Fall Recess", tag:"recess"},
+  {date:"2026-12-21", title:"Winter Recess begins", tag:"recess"},
+  {date:"2026-12-22", title:"Winter Recess", tag:"recess"},
+  {date:"2026-12-23", title:"Winter Recess", tag:"recess"},
+  {date:"2026-12-24", title:"Winter Recess", tag:"recess"},
+  {date:"2026-12-25", title:"Winter Recess", tag:"recess"},
+  {date:"2026-12-26", title:"Winter Recess", tag:"recess"},
+  {date:"2026-12-27", title:"Winter Recess", tag:"recess"},
+  {date:"2026-12-28", title:"Winter Recess", tag:"recess"},
+  {date:"2026-12-29", title:"Winter Recess", tag:"recess"},
+  {date:"2026-12-30", title:"Winter Recess", tag:"recess"},
+  {date:"2026-12-31", title:"Winter Recess", tag:"recess"},
+  {date:"2027-01-01", title:"Winter Recess", tag:"recess"},
+  {date:"2027-01-02", title:"Winter Recess", tag:"recess"},
+  {date:"2027-01-03", title:"Winter Recess ends (floating teacher workday Dec 21–Jan 3)", tag:"recess"},
+  {date:"2027-01-04", title:"Teacher Inservice", tag:"inservice"},
+  {date:"2027-01-18", title:"No School", tag:"holiday"},
+  {date:"2027-02-15", title:"Teacher Inservice", tag:"inservice"},
+  {date:"2027-03-15", title:"Spring Break", tag:"recess"},
+  {date:"2027-03-16", title:"Spring Break", tag:"recess"},
+  {date:"2027-03-17", title:"Spring Break", tag:"recess"},
+  {date:"2027-03-18", title:"Spring Break", tag:"recess"},
+  {date:"2027-03-19", title:"Spring Break", tag:"recess"},
+  {date:"2027-03-26", title:"Parent/Teacher Conferences", tag:"conf"},
+  {date:"2027-03-27", title:"Parent/Teacher Conferences", tag:"conf"},
+  {date:"2027-03-28", title:"Parent/Teacher Conferences", tag:"conf"},
+  {date:"2027-03-29", title:"Parent/Teacher Conferences", tag:"conf"},
+  {date:"2027-04-12", title:"Teacher Inservice", tag:"inservice"},
+  {date:"2027-05-03", title:"Teacher Inservice", tag:"inservice"},
+  {date:"2027-05-16", title:"HHS Graduation", tag:"milestone", noSchool:false},
+  {date:"2027-05-20", title:"Last Day of School (Full Day HMS/HHS)", tag:"milestone", noSchool:false},
+  {date:"2027-05-21", title:"Last Day of School (Half Day Elementary)", tag:"milestone", noSchool:false},
+];
+
+const tagLabels = {
+  holiday:"No School", inservice:"No School — Inservice", conf:"No School — P/T Conf",
+  recess:"No School — Recess", milestone:"School Milestone"
+};
+
+const today = new Date(); today.setHours(0,0,0,0);
+const monthFmt = d => d.toLocaleString('en-US',{month:'long'});
+const dayFmt = d => d.getDate();
+const monAbbr = d => d.toLocaleString('en-US',{month:'short'});
+const wdAbbr = d => d.toLocaleString('en-US',{weekday:'long'});
+const isSameDay = (a,b) => a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate();
+
+function daysBetween(a,b){ return Math.round((b-a)/86400000); }
+
+function render(filterMode, query){
+  const list = document.getElementById('list');
+  list.innerHTML = '';
+  const q = (query||'').toLowerCase().trim();
+
+  let filtered = events.filter(e=>{
+    const d = new Date(e.date+"T00:00:00");
+    if(filterMode==='upcoming' && d < today) return false;
+    if(q && !(e.title.toLowerCase().includes(q) || tagLabels[e.tag].toLowerCase().includes(q))) return false;
+    return true;
+  }).map(e=>({...e, d:new Date(e.date+"T00:00:00")}));
+
+  const hasToday = filtered.some(e=>isSameDay(e.d, today));
+  const todayMatchesQuery = !q || 'today no closure'.includes(q);
+  if(!hasToday && todayMatchesQuery){
+    filtered.push({date: today.toISOString().slice(0,10), d: new Date(today), title:"Today — no closure", tag:null, marker:true});
+  }
+  filtered.sort((a,b)=>a.d-b.d);
+
+  if(filtered.length===0){
+    list.innerHTML = '<div class="empty">No matching dates.</div>';
+    return;
+  }
+
+  let lastMonthKey = '';
+  filtered.forEach(e=>{
+    const d = e.d;
+    const monthKey = d.getFullYear()+'-'+d.getMonth();
+    if(monthKey !== lastMonthKey){
+      const h = document.createElement('div');
+      h.className='month-title';
+      h.textContent = monthFmt(d)+' '+d.getFullYear();
+      list.appendChild(h);
+      lastMonthKey = monthKey;
+    }
+    const isToday = isSameDay(d, today);
+    const row = document.createElement('div');
+    if(e.marker){
+      row.className = 'entry today-marker';
+      row.innerHTML = `
+        <div class="date-badge"><div class="wd">${wdAbbr(d)}</div><div class="d">${dayFmt(d)}</div><div class="m">${monAbbr(d)}</div></div>
+        <div class="entry-body">
+          <div class="entry-title">${e.title}<span class="today-pill">Today</span></div>
+        </div>`;
+      list.appendChild(row);
+      return;
+    }
+    row.className = 'entry' + (d < today ? ' past':'') + (isToday ? ' today':'');
+    row.innerHTML = `
+      <div class="date-badge"><div class="wd">${wdAbbr(d)}</div><div class="d">${dayFmt(d)}</div><div class="m">${monAbbr(d)}</div></div>
+      <div class="entry-body">
+        <div class="entry-title">${e.title}${isToday ? '<span class="today-pill">Today</span>' : ''}</div>
+        <span class="entry-tag tag-${e.tag}">${tagLabels[e.tag]}</span>
+      </div>`;
+    list.appendChild(row);
+  });
+}
+
+function renderNext(){
+  const box = document.getElementById('nextBox');
+  const upcoming = events
+    .filter(e=> e.tag!=='milestone' || e.title.toLowerCase().includes('no school'))
+    .map(e=>({...e, d:new Date(e.date+"T00:00:00")}))
+    .filter(e=> e.d >= today)
+    .sort((a,b)=>a.d-b.d);
+
+  if(upcoming.length===0){
+    box.innerHTML = `<div><div class="label">All closures have passed</div><div class="title">Enjoy the rest of the year</div></div>`;
+    return;
+  }
+  const next = upcoming[0];
+  const diff = daysBetween(today, next.d);
+  box.innerHTML = `
+    <div>
+      <div class="label">Next closure</div>
+      <div class="title">${next.title}</div>
+    </div>
+    <div class="days">${diff===0?'Today':diff}${diff===0?'':''}<span>${diff===0?'':(diff===1?'day away':'days away')}</span></div>`;
+}
+
+document.querySelectorAll('.controls button').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.controls button').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    render(btn.dataset.filter, document.getElementById('search').value);
+  });
+});
+document.getElementById('search').addEventListener('input', (e)=>{
+  const activeBtn = document.querySelector('.controls button.active');
+  render(activeBtn.dataset.filter, e.target.value);
+});
+
+renderNext();
+render('all','');
+</script>
+</body>
+</html>

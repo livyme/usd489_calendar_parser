@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: usd489-calendar
+  labels:
+    app: usd489-calendar
+spec:
+  # ClusterIP only -- no Ingress. Point cloudflared at:
+  #   http://usd489-calendar.<namespace>.svc.cluster.local
+  type: ClusterIP
+  selector:
+    app: usd489-calendar
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+      protocol: TCP

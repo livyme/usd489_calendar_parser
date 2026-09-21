@@ -1,0 +1,54 @@
+# Local development loop. Source is bind-mounted into a stock uv image, so
+# edits to app.py / static/index.html need no image rebuild:
+#   docker compose up                  -> http://localhost:8489/
+#   docker compose restart calendar    -> pick up Python edits
+# Edits to static/index.html need no restart at all (read per request).
+#
+# To exercise the real production image instead:
+#   docker compose --profile image up --build calendar-image
+services:
+  calendar:
+    image: ghcr.io/astral-sh/uv:python3.14-bookworm-slim
+    working_dir: /app
+    command: uv run python app.py
+    environment:
+      HOST: 0.0.0.0
+      PORT: "8489"
+      CACHE_DIR: /data
+      UV_PROJECT_ENVIRONMENT: /venv
+      UV_COMPILE_BYTECODE: "1"
+      # cache volume and /venv are separate filesystems, so hardlinks are unavailable
+      UV_LINK_MODE: copy
+      PYTHONUNBUFFERED: "1"
+    volumes:
+      - .:/app
+      # Keep the Linux venv, uv cache and app cache out of the bind mount so
+      # they can never collide with the host's own .venv.
+      - venv:/venv
+      - uv-cache:/root/.cache/uv
+      - data:/data
+    ports:
+      - "8489:8489"
+
+  # The actual image that ships to k8s, for a pre-push smoke test.
+  calendar-image:
+    profiles: ["image"]
+    build:
+      context: .
+    read_only: true
+    tmpfs:
+      - /tmp
+    volumes:
+      - data-image:/data
+    ports:
+      - "8490:8489"
+
+volumes:
+  venv:
+    name: hays489-venv
+  uv-cache:
+    name: hays489-uv-cache
+  data:
+    name: hays489-data
+  data-image:
+    name: hays489-data-image
