@@ -149,7 +149,9 @@
   /* ---- next closure ---------------------------------------------------- */
   .next{
     position:relative;
-    background:var(--surface);
+    /* Same tint as the highlighted "today" row, so the two accented things on
+       the page read as one family. */
+    background:var(--accent-soft);
     border:1px solid var(--border);
     border-radius:var(--radius);
     box-shadow:var(--shadow);
@@ -583,13 +585,7 @@
   }
   footer p{margin:0 0 5px;}
   footer p:last-child{margin-bottom:0;}
-  .foot-legal{
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    gap:8px;
-    flex-wrap:wrap;
-  }
+  .foot-legal{color:var(--text-muted);}
 
   .visually-hidden{
     position:absolute;width:1px;height:1px;
@@ -714,12 +710,8 @@
   </details>
 
   <footer>
-    <p>#EveryStudentEveryDay489 &middot; <span id="footerSource">USD 489 district calendar</span></p>
-    <p class="foot-legal">
-      <a href="https://github.com/livyme/usd489_calendar_parser" target="_blank" rel="noopener">Source code</a>
-      <span aria-hidden="true">&middot;</span>
-      <span>&copy; 2026 livy.li, co-authored with Claude Opus 5</span>
-    </p>
+    <p id="footerSource"></p>
+    <p class="foot-legal">&copy; 2026 livy.li, co-authored with Claude Opus 5</p>
   </footer>
 </div>
 
@@ -883,8 +875,13 @@ function renderNotes(){
 function renderMeta(){
   const year = (state.data && state.data.schoolYear) || '';
   document.getElementById('yearLabel').textContent = year;
-  document.getElementById('footerSource').textContent =
-    year ? `District ${year} calendar` : 'USD 489 district calendar';
+
+  const repo = 'https://github.com/livyme/usd489_calendar_parser';
+  const desc = year
+    ? `USD 489 District ${esc(year)} calendar parser`
+    : 'USD 489 District calendar parser';
+  document.getElementById('footerSource').innerHTML =
+    `${desc} (<a href="${repo}" target="_blank" rel="noopener">source code</a>)`;
 
   // An https:// link to a text/calendar file makes iOS *import* the events
   // once. The webcal:// scheme is what routes to Calendar's "subscribe" flow,
