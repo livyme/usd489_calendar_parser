@@ -37,6 +37,7 @@
     --border-strong:#d6d0ca;
 
     --accent:#8c1d1d;
+    --accent-hover:#a52424;
     --accent-soft:#f7eeee;
     --accent-text:#8c1d1d;
     --on-accent:#ffffff;
@@ -73,6 +74,7 @@
     --border-strong:#3d3d41;
 
     --accent:#e8908f;
+    --accent-hover:#f2aead;
     --accent-soft:#2a1a1a;
     --accent-text:#f0a8a7;
     --on-accent:#1c1c1e;
@@ -243,7 +245,16 @@
     border-color:var(--accent);
     color:var(--on-accent);
   }
-  .btn-primary:hover{background:var(--accent);filter:brightness(1.08);}
+  /* Must match the specificity of .btn:hover:not(:disabled) -- (0,3,0), since
+     :not(:disabled) counts as a pseudo-class -- and come after it. Otherwise
+     the generic hover repaints this button with the sunken surface while the
+     --on-accent label colour stays put, leaving white on near-white. Colour is
+     re-asserted here so background and text can never desync. */
+  .btn-primary:hover:not(:disabled){
+    background:var(--accent-hover);
+    border-color:var(--accent-hover);
+    color:var(--on-accent);
+  }
   .btn .ico{font-size:.9em;line-height:1;}
   .spin{display:inline-block;animation:spin 900ms linear infinite;}
   @keyframes spin{to{transform:rotate(360deg);}}
