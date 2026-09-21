@@ -47,20 +47,31 @@ For local development there is no Access in front, so set
 `ALLOW_INSECURE_ADMIN=1` to permit admin actions (`docker-compose.yml` already
 does). Never set it on anything reachable from the internet.
 
-**Cloudflare Access supplies the identity.** In Cloudflare Zero Trust, add a
-self-hosted application covering the **whole prefix**:
+**Cloudflare Access supplies the identity.** In Cloudflare Zero Trust go to
+Access controls → Applications → Create new application → Self-hosted, and add
+**two** path entries with the same policy:
 
 ```
-Application domain:  <your-host>/admin
-Policy:              Allow — Emails — <your email>
+Public hostname:  <your-host>   path: admin      (the status page)
+Public hostname:  <your-host>   path: admin/*    (whoami + refresh)
+Policy:           Allow — Emails — <your email>
 ```
 
-Visit `<your-host>/admin` after adding the policy to confirm it works: it
-shows the identity Access passed through, and whether refreshing is permitted.
-Protect `/admin`, not just `/admin/refresh`. `/admin/whoami` is what the page
-probes to decide whether to show its Refresh button; if that probe is left
-public while refresh is protected, every visitor sees a button that fails with
-a login redirect.
+Both are required. A path of `admin` covers only `/admin` and does *not* cover
+`/admin/refresh`, while `admin/*` covers everything beneath `/admin` but not
+`/admin` itself — see Cloudflare's [application paths][paths] docs. Protecting
+only `admin` leaves the real endpoints open; protecting only `admin/*` leaves
+the status page reporting "no identity" to everyone. If the dashboard accepts
+just one hostname per application, make two applications.
+
+Do **not** add an application covering `/`, or the calendar page, the iCal feed
+and the Kubernetes probes will all start demanding a login.
+
+Visit `<your-host>/admin` to check the result: it shows the identity Access
+passed through and whether refreshing is permitted. If it loads but reports no
+identity, Access is not in front of that path.
+
+[paths]: https://developers.cloudflare.com/cloudflare-one/access-controls/policies/app-paths/
 
 Once you have signed in through Access, the `CF_Authorization` cookie rides
 along on the page's same-origin `fetch`, so the in-page button just works. An
