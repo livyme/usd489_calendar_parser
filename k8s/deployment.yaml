@@ -12,7 +12,17 @@ spec:
   # calendar once a year, so a single replica is the right trade.
   replicas: 1
   strategy:
-    type: Recreate
+    # RollingUpdate with maxUnavailable 0 so the running pod keeps serving until
+    # the replacement is Ready. That matters because a bad image tag or a
+    # failing readiness probe would otherwise take the service to zero pods:
+    # under Recreate the old pod is terminated *before* the new one is pulled.
+    # Cost is two pods coexisting for a few seconds mid-rollout, each with its
+    # own cache -- harmless, since both serve valid data (the new one from the
+    # seed baked into the image, the old from its own /data cache).
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
   selector:
     matchLabels:
       app: usd489-calendar
