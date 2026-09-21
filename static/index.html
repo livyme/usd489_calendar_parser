@@ -93,6 +93,10 @@
 
   /* ---- base ------------------------------------------------------------ */
   *,*::before,*::after{box-sizing:border-box;}
+  /* The hidden attribute hides via a user-agent rule, which ANY author
+     display declaration outranks -- .btn{display:inline-flex} silently
+     defeated it and left [hidden] elements on screen. */
+  [hidden]{display:none !important;}
   html{-webkit-text-size-adjust:100%;}
   body{
     margin:0;
@@ -219,6 +223,8 @@
     margin-bottom:clamp(18px,3vw,24px);
   }
   .provenance .stale{color:var(--accent-text);font-weight:600;}
+  .provenance a.src{font-weight:600;}
+  .provenance strong{color:var(--text-soft);font-weight:600;}
   .actions{display:flex;gap:8px;align-items:center;}
 
   .btn{
@@ -701,11 +707,10 @@
 
     <h3>Where the dates come from</h3>
     <ol>
-      <li>Fetch the <a id="aboutHome" href="https://www.usd489.com/" target="_blank" rel="noopener">usd489.com</a> homepage and read the site's own navigation menu, which is embedded in the page as JSON.</li>
-      <li>Pick the nav entry that looks like the district calendar &mdash; preferring one named &ldquo;district&rdquo; with the latest school year, and skipping the BOE meeting calendar. It currently resolves <span id="aboutLabel">that link</span>.</li>
-      <li>Follow it to the calendar PDF the district hosts on Thrillshare, and confirm the response really is a PDF.</li>
-      <li>Read the <strong>legend column</strong> down the right-hand side of the PDF &mdash; the <em>&ldquo;17-NO SCHOOL Teacher Inservice&rdquo;</em> list &mdash; rather than the month grids. The legend is plain text in reading order; the grids are bare day numbers whose meaning is carried only by colour fill, so they'd break far more easily.</li>
-      <li>Expand day ranges into individual dates, sort them, and hand the result to this page as JSON. Nothing here is typed in by hand &mdash; if the district changes the PDF, a refresh picks it up.</li>
+      <li>Read the nav menu on the <a id="aboutHome" href="https://www.usd489.com/" target="_blank" rel="noopener">usd489.com</a> homepage and pick the district calendar link &mdash; currently <span id="aboutLabel">the district calendar</span>.</li>
+      <li>Follow it to the PDF the district hosts on Thrillshare, and check it really is a PDF.</li>
+      <li>Parse the <strong>legend column</strong> down the right of the PDF &mdash; the <em>&ldquo;17-NO SCHOOL Teacher Inservice&rdquo;</em> list &mdash; not the month grids, where the meaning is carried only by colour.</li>
+      <li>Expand date ranges into individual days. Nothing is typed in by hand, so a refresh picks up whatever the district changed.</li>
     </ol>
 
     <h3>How it stays a good citizen of usd489.com</h3>
@@ -869,12 +874,26 @@ function renderSource(){
   const ageText = age===0 ? 'today' : age===1 ? 'yesterday' : age+' days ago';
   const stale = age >= 120 ? ' class="stale"' : '';
 
-  const bits = [`Retrieved <span${stale}>${esc(ageText)}</span>`];
+  const time = at.toLocaleTimeString('en-US', {hour: '2-digit', minute: '2-digit'});
+
+  // Lead with the source, and hang the PDF link on that phrase rather than
+  // carrying a second "Source PDF" link for the same target.
+  const name = 'official district calendar';
+  const bits = [
+    meta.pdfUrl
+      ? `From the <a class="src" href="${esc(meta.pdfUrl)}" target="_blank" rel="noopener">${name}</a>`
+      : `From the <strong>${name}</strong>`,
+    `Retrieved <span${stale}>${esc(ageText)}</span> ${esc(time)}`,
+  ];
   if(meta.pdfLastModified){
     const lm = new Date(meta.pdfLastModified);
-    if(!isNaN(lm)) bits.push(`district updated it ${esc(lm.toLocaleDateString('en-US',{dateStyle:'medium'}))}`);
+    if(!isNaN(lm)){
+      // "Dated" rather than "updated": this is the file's Last-Modified, not
+      // an editorial revision date.
+      bits.push(`Dated ${esc(lm.toLocaleDateString('en-US',
+        {month: '2-digit', day: '2-digit', year: 'numeric'}))}`);
+    }
   }
-  if(meta.pdfUrl) bits.push(`<a href="${esc(meta.pdfUrl)}" target="_blank" rel="noopener">source PDF</a>`);
   el.innerHTML = bits.join(' &middot; ');
 }
 
@@ -891,12 +910,12 @@ function renderMeta(){
   const year = (state.data && state.data.schoolYear) || '';
   document.getElementById('yearLabel').textContent = year;
 
+  // No school year here: this describes the tool, which is year-agnostic. The
+  // year of the data being shown is in the masthead.
   const repo = 'https://github.com/livyme/usd489_calendar_parser';
-  const desc = year
-    ? `USD 489 District ${esc(year)} calendar parser`
-    : 'USD 489 District calendar parser';
   document.getElementById('footerSource').innerHTML =
-    `${desc} (<a href="${repo}" target="_blank" rel="noopener">source code</a>)`;
+    'USD 489 district calendar parser ' +
+    `(<a href="${repo}" target="_blank" rel="noopener">Source code</a>)`;
 
   // An https:// link to a text/calendar file makes iOS *import* the events
   // once. The webcal:// scheme is what routes to Calendar's "subscribe" flow,
@@ -921,9 +940,9 @@ function renderAbout(){
   }
   const label = document.getElementById('aboutLabel');
   if(meta.linkLabel && meta.pdfUrl){
-    label.innerHTML = `to <strong>${esc(meta.linkLabel)}</strong>`;
+    label.innerHTML = `<strong>${esc(meta.linkLabel)}</strong>`;
   }else{
-    label.textContent = 'that link';
+    label.textContent = 'the district calendar';
   }
   if(meta.pdfUrl) document.getElementById('aboutPdfLink').href = meta.pdfUrl;
 }
@@ -990,7 +1009,7 @@ function showSignedOut(){
   document.getElementById('bannerSlot').innerHTML =
     '<div class="banner"><span aria-hidden="true">&#9888;</span><span>' +
     'Your admin session has expired. ' +
-    '<a href="/admin/whoami" target="_blank" rel="noopener">Sign in again</a>, ' +
+    '<a href="/admin" target="_blank" rel="noopener">Sign in again</a>, ' +
     'then reload this page to refresh.</span></div>';
 }
 
@@ -1009,8 +1028,9 @@ async function refresh(){
     if(!who.ok) return showBanner(`Refresh unavailable: HTTP ${who.status}`);
     if(!who.body.authenticated){
       document.getElementById('refreshBtn').hidden = true;
-      return showBanner('Refresh is disabled: this request carries no Cloudflare ' +
-        'Access identity, so the server will not crawl usd489.com.');
+      return showBanner('Refresh is limited to admins, to keep load off the ' +
+        "district's website. If this calendar looks out of date, please contact " +
+        'the admin for a refresh.');
     }
 
     const res = await adminFetch('/admin/refresh', {method:'POST'});

@@ -22,6 +22,7 @@ Admin — everything that can reach out to usd489.com:
 
 | Route | Purpose |
 | --- | --- |
+| `GET /admin` | status page — where Access lands you after signing in |
 | `GET /admin/whoami` | reports the Cloudflare Access identity, if any |
 | `POST /admin/refresh` | re-crawl usd489.com now, update the cache, return the new data |
 
@@ -54,6 +55,8 @@ Application domain:  <your-host>/admin
 Policy:              Allow — Emails — <your email>
 ```
 
+Visit `<your-host>/admin` after adding the policy to confirm it works: it
+shows the identity Access passed through, and whether refreshing is permitted.
 Protect `/admin`, not just `/admin/refresh`. `/admin/whoami` is what the page
 probes to decide whether to show its Refresh button; if that probe is left
 public while refresh is protected, every visitor sees a button that fails with

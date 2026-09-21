@@ -12,6 +12,7 @@ Public:
 
 Everything that can reach out to usd489.com lives under /admin/, so a single
 Cloudflare Access policy on /admin/* covers it:
+  GET  /admin           status page; where Access lands you after login
   GET  /admin/whoami    reports the Cloudflare Access identity, if any
   POST /admin/refresh   re-crawl usd489.com now, update cache, return new data
 
@@ -34,6 +35,7 @@ POST /admin/refresh (the Refresh button, shown only to an authenticated admin).
 
 from __future__ import annotations
 
+import html
 import json
 import os
 import signal
@@ -248,6 +250,8 @@ class Handler(BaseHTTPRequestHandler):
                 {"status": "no calendar data loaded"},
                 self._no_store(),
             )
+        if route == "/admin":
+            return self._serve_admin_page()
         if route == "/admin/whoami":
             return self._serve_whoami()
         if route == "/admin/refresh":
@@ -332,6 +336,87 @@ class Handler(BaseHTTPRequestHandler):
         payload = dict(data)
         payload["cacheSource"] = STORE.source
         self._json(HTTPStatus.OK, payload, self._no_store())
+
+    def _serve_admin_page(self) -> None:
+        """Human-readable landing page for /admin.
+
+        Cloudflare Access sends you here after login, so it needs to be
+        readable rather than a JSON 404. Doubles as a way to confirm the Access
+        policy is working: if it says no identity, the policy is not in front.
+        """
+        email = self._admin_identity()
+        allowed = self._admin_allowed()
+        wait = STORE.retry_after()
+
+        if email:
+            identity = f"Signed in as <strong>{html.escape(email)}</strong>."
+        elif ALLOW_INSECURE_ADMIN:
+            identity = (
+                "No Cloudflare Access identity, but <code>ALLOW_INSECURE_ADMIN</code> "
+                "is set, so admin actions are permitted. Expected locally; a mistake "
+                "anywhere public."
+            )
+        else:
+            identity = (
+                "No Cloudflare Access identity on this request, so refreshing is "
+                "disabled. Protect <code>/admin</code> with an Access policy."
+            )
+
+        state = "permitted" if allowed else "disabled"
+        throttle = (
+            f"Throttled for another {wait}s." if wait
+            else f"Ready (minimum {MIN_REFRESH_INTERVAL}s between crawls)."
+        )
+        meta = (STORE.data or {}).get("meta") or {}
+        retrieved = html.escape(str(meta.get("retrievedAt", "unknown")))
+
+        body = f"""<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin — USD 489 Closures</title>
+<style>
+  :root{{color-scheme:light dark}}
+  body{{margin:0;padding:clamp(24px,5vw,48px);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif;
+    line-height:1.55;background:#fbfaf9;color:#1c1917}}
+  main{{max-width:34rem;margin:0 auto}}
+  h1{{font-size:1.25rem;margin:0 0 4px;letter-spacing:-.02em}}
+  p{{margin:0 0 12px}}
+  .muted{{color:#8a827c;font-size:.85rem}}
+  dl{{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;
+    margin:18px 0;font-size:.9rem}}
+  dt{{color:#8a827c}}
+  dd{{margin:0}}
+  code{{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.85em;
+    background:#f4f2f0;border-radius:4px;padding:1px 5px}}
+  a{{color:#8c1d1d}}
+  .ok{{color:#1f6b38;font-weight:600}}
+  .no{{color:#8c1d1d;font-weight:600}}
+  @media (prefers-color-scheme:dark){{
+    body{{background:#131314;color:#f2f0ee}}
+    code{{background:#242426}} a{{color:#f0a8a7}}
+    .muted,dt{{color:#8b847e}} .ok{{color:#8ed7a3}} .no{{color:#e8908f}}
+  }}
+</style></head><body><main>
+<h1>USD 489 Closures — admin</h1>
+<p class="muted">{identity}</p>
+<dl>
+  <dt>Refresh</dt><dd class="{'ok' if allowed else 'no'}">{state}</dd>
+  <dt>Throttle</dt><dd>{throttle}</dd>
+  <dt>Data source</dt><dd>{html.escape(STORE.source)}</dd>
+  <dt>Retrieved</dt><dd>{retrieved}</dd>
+</dl>
+<p>Refreshing is done from the calendar page itself — the Refresh button
+   appears there once this page shows an identity.</p>
+<p><a href="/">&larr; Back to the calendar</a></p>
+</main></body></html>
+"""
+        self._send(
+            HTTPStatus.OK,
+            body.encode(),
+            "text/html; charset=utf-8",
+            self._no_store(),
+        )
 
     def _serve_whoami(self) -> None:
         """Report the Cloudflare Access identity, for the UI to gate on.
