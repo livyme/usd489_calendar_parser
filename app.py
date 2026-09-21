@@ -3,24 +3,33 @@
 
 Routes
 ------
-GET  /                  UI shell (renders client-side from /api/calendar)
-GET  /api/calendar      parsed calendar + provenance, as JSON
-POST /api/refresh       re-crawl usd489.com now, update cache, return new data
-GET  /calendar.ics      iCalendar feed for phone/desktop calendar subscriptions
-GET  /healthz           liveness: process is up
-GET  /readyz            readiness: calendar data is loaded and servable
+Public:
+  GET  /                UI shell (renders client-side from /api/calendar)
+  GET  /api/calendar    parsed calendar + provenance, as JSON
+  GET  /calendar.ics    iCalendar feed for phone/desktop calendar subscriptions
+  GET  /healthz         liveness: process is up
+  GET  /readyz          readiness: calendar data is loaded and servable
+
+Everything that can reach out to usd489.com lives under /admin/, so a single
+Cloudflare Access policy on /admin/* covers it:
+  GET  /admin/whoami    reports the Cloudflare Access identity, if any
+  POST /admin/refresh   re-crawl usd489.com now, update cache, return new data
+
+The app deliberately does not authenticate /admin/ itself -- enforcement is at
+the edge. It does throttle refreshes (see MIN_REFRESH_INTERVAL) so that even an
+exposed endpoint cannot be used to hammer the district's website.
 
 Caching
 -------
 The district publishes the calendar once and rarely changes it, so there is no
 background poller. Data is loaded at startup from, in order of preference:
 
-  1. $CACHE_DIR/calendar.json   -- written by a previous /api/refresh
+  1. $CACHE_DIR/calendar.json   -- written by a previous refresh
   2. $SEED_FILE                 -- baked into the image at build time
 
 Startup therefore does no network I/O at all: a cold pod is ready immediately
 and serves usable data even if usd489.com is down. Refresh is explicit, via
-POST /api/refresh (the Refresh button in the UI).
+POST /admin/refresh (the Refresh button, shown only to an authenticated admin).
 """
 
 from __future__ import annotations
@@ -30,6 +39,7 @@ import os
 import signal
 import sys
 import threading
+import time
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -48,11 +58,30 @@ STATIC_DIR = Path(os.environ.get("STATIC_DIR", ROOT / "static"))
 # waiting on someone else's website. Turn on if you want startup to re-crawl.
 REFRESH_ON_START = os.environ.get("REFRESH_ON_START", "").lower() in ("1", "true", "yes")
 
+# Floor on how often a refresh may actually crawl usd489.com. This is not the
+# access control -- Cloudflare Access is -- but it bounds the damage if /admin/
+# is ever reachable without it, and stops an impatient double-click turning into
+# two crawls. Set to 0 to disable.
+MIN_REFRESH_INTERVAL = int(os.environ.get("MIN_REFRESH_INTERVAL", "300"))
+
+# Header Cloudflare Access adds to authenticated requests. Presence is used only
+# to decide whether the UI shows its Refresh button; it is not a security
+# boundary, since anything reaching the pod directly could set it.
+ACCESS_EMAIL_HEADER = "Cf-Access-Authenticated-User-Email"
+
 CACHE_FILE = CACHE_DIR / "calendar.json"
 
 
 def log(message: str) -> None:
     print(message, file=sys.stderr, flush=True)
+
+
+class Throttled(Exception):
+    """Raised when a refresh is attempted inside MIN_REFRESH_INTERVAL."""
+
+    def __init__(self, retry_after: int) -> None:
+        super().__init__(f"Refreshed too recently; retry in {retry_after}s.")
+        self.retry_after = retry_after
 
 
 class CalendarStore:
@@ -63,6 +92,7 @@ class CalendarStore:
         self._data: dict | None = None
         self._source: str = "none"
         self._refresh_lock = threading.Lock()
+        self._last_refresh: float = 0.0
 
     # -- loading -----------------------------------------------------------
     def load(self) -> None:
@@ -103,6 +133,13 @@ class CalendarStore:
         return bool(self.data)
 
     # -- refreshing --------------------------------------------------------
+    def retry_after(self) -> int:
+        """Seconds until another crawl is permitted, 0 if one is allowed now."""
+        if MIN_REFRESH_INTERVAL <= 0 or not self._last_refresh:
+            return 0
+        elapsed = time.monotonic() - self._last_refresh
+        return max(0, int(MIN_REFRESH_INTERVAL - elapsed) + 1) if elapsed < MIN_REFRESH_INTERVAL else 0
+
     def refresh(self) -> dict:
         """Re-crawl and persist. Raises CalendarError, leaving old data intact."""
         # One refresh at a time; concurrent clicks shouldn't stampede the site.
@@ -111,6 +148,9 @@ class CalendarStore:
                 "A refresh is already running -- try again in a moment."
             )
         try:
+            wait = self.retry_after()
+            if wait:
+                raise Throttled(wait)
             data, _pdf = calendar_source.fetch_calendar(log=log)
             try:
                 CACHE_DIR.mkdir(parents=True, exist_ok=True)
@@ -126,6 +166,7 @@ class CalendarStore:
             with self._lock:
                 self._data = data
                 self._source = origin
+            self._last_refresh = time.monotonic()
             return data
         finally:
             self._refresh_lock.release()
@@ -186,10 +227,12 @@ class Handler(BaseHTTPRequestHandler):
                 {"status": "no calendar data loaded"},
                 self._no_store(),
             )
-        if route == "/api/refresh":
+        if route == "/admin/whoami":
+            return self._serve_whoami()
+        if route == "/admin/refresh":
             return self._json(
                 HTTPStatus.METHOD_NOT_ALLOWED,
-                {"error": "use POST /api/refresh"},
+                {"error": "use POST /admin/refresh"},
                 {"Allow": "POST", **self._no_store()},
             )
         self._json(HTTPStatus.NOT_FOUND, {"error": f"no route for {route}"})
@@ -199,10 +242,17 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:  # noqa: N802
         route = self.path.split("?", 1)[0].rstrip("/") or "/"
-        if route != "/api/refresh":
+        if route != "/admin/refresh":
             return self._json(HTTPStatus.NOT_FOUND, {"error": f"no route for {route}"})
         try:
             data = STORE.refresh()
+        except Throttled as exc:
+            log(f"[warn] refresh throttled ({exc.retry_after}s remaining)")
+            return self._json(
+                HTTPStatus.TOO_MANY_REQUESTS,
+                {"error": str(exc), "retryAfter": exc.retry_after},
+                {"Retry-After": str(exc.retry_after), **self._no_store()},
+            )
         except calendar_source.CalendarError as exc:
             log(f"[error] refresh failed: {exc}")
             return self._json(
@@ -238,19 +288,38 @@ class Handler(BaseHTTPRequestHandler):
         if not data:
             return self._json(
                 HTTPStatus.SERVICE_UNAVAILABLE,
-                {"error": "no calendar data loaded yet; POST /api/refresh"},
+                {"error": "no calendar data loaded yet; POST /admin/refresh"},
                 self._no_store(),
             )
         payload = dict(data)
         payload["cacheSource"] = STORE.source
         self._json(HTTPStatus.OK, payload, self._no_store())
 
+    def _serve_whoami(self) -> None:
+        """Report the Cloudflare Access identity, for the UI to gate on.
+
+        Reaching this at all means Access let the request through, so the UI
+        treats a 200 as "show the Refresh button". Unauthenticated callers get
+        a redirect to the Access login page and never see this handler.
+        """
+        email = self.headers.get(ACCESS_EMAIL_HEADER)
+        self._json(
+            HTTPStatus.OK,
+            {
+                "authenticated": bool(email),
+                "email": email,
+                "retryAfter": STORE.retry_after(),
+                "minRefreshInterval": MIN_REFRESH_INTERVAL,
+            },
+            self._no_store(),
+        )
+
     def _serve_ics(self) -> None:
         data = STORE.data
         if not data:
             return self._json(
                 HTTPStatus.SERVICE_UNAVAILABLE,
-                {"error": "no calendar data loaded yet; POST /api/refresh"},
+                {"error": "no calendar data loaded yet; POST /admin/refresh"},
                 self._no_store(),
             )
         body = ical_feed.render_ics(data)

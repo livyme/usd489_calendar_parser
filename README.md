@@ -8,14 +8,52 @@ Unofficial personal project; not affiliated with Hays USD 489.
 
 ## Endpoints
 
+Public:
+
 | Route | Purpose |
 | --- | --- |
 | `GET /` | the closures page (renders client-side from the API) |
 | `GET /api/calendar` | parsed calendar + provenance, as JSON |
-| `POST /api/refresh` | re-crawl usd489.com now, update the cache, return the new data |
 | `GET /calendar.ics` | iCalendar feed for calendar subscriptions |
 | `GET /healthz` | liveness — the process is up |
 | `GET /readyz` | readiness — calendar data is loaded and servable |
+
+Admin — everything that can reach out to usd489.com:
+
+| Route | Purpose |
+| --- | --- |
+| `GET /admin/whoami` | reports the Cloudflare Access identity, if any |
+| `POST /admin/refresh` | re-crawl usd489.com now, update the cache, return the new data |
+
+## Keeping refresh private
+
+The site is public, so anyone who could reach `POST /admin/refresh` could make
+this service crawl usd489.com on demand. Two things prevent that.
+
+**Cloudflare Access protects the path.** The app does *not* authenticate
+`/admin/` itself — enforcement is at the edge. In Cloudflare Zero Trust, add a
+self-hosted application covering the **whole prefix**:
+
+```
+Application domain:  <your-host>/admin
+Policy:              Allow — Emails — <your email>
+```
+
+Protect `/admin`, not just `/admin/refresh`. `/admin/whoami` is what the page
+probes to decide whether to show its Refresh button; if that probe is left
+public while refresh is protected, every visitor sees a button that fails with
+a login redirect.
+
+Once you have signed in through Access, the `CF_Authorization` cookie rides
+along on the page's same-origin `fetch`, so the in-page button just works. An
+unauthenticated visitor's probe is redirected to the login page, which the page
+reads as "not an admin" and leaves the button hidden.
+
+**Refreshes are throttled regardless.** `MIN_REFRESH_INTERVAL` (default 300s)
+caps how often a crawl can actually happen, and a single-flight lock means
+concurrent clicks cannot stampede. Repeat attempts get `429` with `Retry-After`
+rather than hitting the district's site. That is deliberately independent of
+who is asking, so a misconfigured policy cannot turn into a crawl loop.
 
 ## Subscribe from an iPhone
 
@@ -131,6 +169,7 @@ replica is the right trade rather than adding shared state to work around it.
 | `SEED_FILE` | `./seed/calendar.json` | fallback data baked into the image |
 | `STATIC_DIR` | `./static` | UI shell location |
 | `REFRESH_ON_START` | unset | set to `1` to crawl at startup instead of trusting the cache |
+| `MIN_REFRESH_INTERVAL` | `300` | seconds between permitted crawls; `0` disables the throttle |
 
 ## How the data is cached
 
@@ -142,7 +181,7 @@ poller. At startup the app loads, in order of preference:
 
 **Startup does no network I/O at all.** A cold pod is ready immediately and serves usable
 data even if usd489.com is down. usd489.com is contacted only when someone calls
-`POST /api/refresh` (the Refresh button) — not on page load, not on a timer, not per
+`POST /admin/refresh` (the Refresh button) — not on page load, not on a timer, not per
 visitor.
 
 To refresh the seed baked into the image:
@@ -188,7 +227,7 @@ Refresh fails loudly with an actionable message and **keeps serving the last goo
 - *"found no dated entries"* — the PDF layout changed; check `SIDEBAR_X` and `DAYSPEC_RE`.
 
 A failed refresh surfaces the error in the UI and returns `502` from
-`POST /api/refresh`; readiness is unaffected, so k8s won't restart the pod over it.
+`POST /admin/refresh`; readiness is unaffected, so k8s won't restart the pod over it.
 
 ## Layout
 
