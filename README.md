@@ -200,7 +200,6 @@ static/index.html      UI shell (inline CSS/JS, renders from /api/calendar)
 seed/calendar.json     seed cache baked into the image
 k8s/                   Deployment + ClusterIP Service (ns l-usd489-calendar)
 .github/workflows/     on a v* tag: smoke-test, publish to ghcr.io, pin the tag in k8s/
-docs/example/          original design reference for the page
 ```
 
 ## Known quirk in the source PDF
