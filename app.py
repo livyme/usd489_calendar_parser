@@ -64,10 +64,23 @@ REFRESH_ON_START = os.environ.get("REFRESH_ON_START", "").lower() in ("1", "true
 # two crawls. Set to 0 to disable.
 MIN_REFRESH_INTERVAL = int(os.environ.get("MIN_REFRESH_INTERVAL", "300"))
 
-# Header Cloudflare Access adds to authenticated requests. Presence is used only
-# to decide whether the UI shows its Refresh button; it is not a security
-# boundary, since anything reaching the pod directly could set it.
+# Header Cloudflare Access adds to requests it has authenticated. Admin routes
+# refuse to act without it, so the service fails CLOSED if the Access policy is
+# missing or misconfigured rather than exposing a crawl trigger to the internet.
+#
+# This is a presence check, not cryptographic verification: anything able to
+# reach the pod directly could set the header itself. The real boundary is the
+# Access policy plus the fact that the tunnel is the only ingress. Validating
+# Cf-Access-Jwt-Assertion against the team JWKS would close that too.
 ACCESS_EMAIL_HEADER = "Cf-Access-Authenticated-User-Email"
+
+# Escape hatch for local development, where there is no Access in front. Never
+# set this on a deployment reachable from the internet.
+ALLOW_INSECURE_ADMIN = os.environ.get("ALLOW_INSECURE_ADMIN", "").lower() in (
+    "1",
+    "true",
+    "yes",
+)
 
 CACHE_FILE = CACHE_DIR / "calendar.json"
 
@@ -203,6 +216,14 @@ class Handler(BaseHTTPRequestHandler):
     def _no_store(self) -> dict[str, str]:
         return {"Cache-Control": "no-store"}
 
+    # -- admin gate --------------------------------------------------------
+    def _admin_identity(self) -> str | None:
+        return self.headers.get(ACCESS_EMAIL_HEADER)
+
+    def _admin_allowed(self) -> bool:
+        """True when this request may perform an admin action."""
+        return bool(self._admin_identity()) or ALLOW_INSECURE_ADMIN
+
     # -- routing -----------------------------------------------------------
     def do_GET(self) -> None:  # noqa: N802
         route = self.path.split("?", 1)[0].rstrip("/") or "/"
@@ -244,6 +265,23 @@ class Handler(BaseHTTPRequestHandler):
         route = self.path.split("?", 1)[0].rstrip("/") or "/"
         if route != "/admin/refresh":
             return self._json(HTTPStatus.NOT_FOUND, {"error": f"no route for {route}"})
+
+        # Fail closed: without an Access identity we refuse to crawl, so a
+        # missing or misconfigured edge policy cannot leave a public trigger
+        # for hitting the district's website.
+        if not self._admin_allowed():
+            log("[warn] refused refresh: no Cloudflare Access identity on request")
+            return self._json(
+                HTTPStatus.FORBIDDEN,
+                {
+                    "error": (
+                        "Refusing to refresh: no Cloudflare Access identity on this "
+                        "request. Protect /admin/ with an Access policy, or set "
+                        "ALLOW_INSECURE_ADMIN=1 for local development."
+                    )
+                },
+                self._no_store(),
+            )
         try:
             data = STORE.refresh()
         except Throttled as exc:
@@ -302,12 +340,15 @@ class Handler(BaseHTTPRequestHandler):
         treats a 200 as "show the Refresh button". Unauthenticated callers get
         a redirect to the Access login page and never see this handler.
         """
-        email = self.headers.get(ACCESS_EMAIL_HEADER)
+        email = self._admin_identity()
         self._json(
             HTTPStatus.OK,
             {
-                "authenticated": bool(email),
+                # "may this caller refresh", which is what the UI gates on --
+                # not merely "did this request arrive".
+                "authenticated": self._admin_allowed(),
                 "email": email,
+                "insecureAdminAllowed": ALLOW_INSECURE_ADMIN,
                 "retryAfter": STORE.retry_after(),
                 "minRefreshInterval": MIN_REFRESH_INTERVAL,
             },

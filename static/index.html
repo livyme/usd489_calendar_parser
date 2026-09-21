@@ -1007,6 +1007,11 @@ async function refresh(){
     if(who.signedOut) return showSignedOut();
     if(who.networkError) return showBanner(`Could not reach the server: ${who.networkError}`);
     if(!who.ok) return showBanner(`Refresh unavailable: HTTP ${who.status}`);
+    if(!who.body.authenticated){
+      document.getElementById('refreshBtn').hidden = true;
+      return showBanner('Refresh is disabled: this request carries no Cloudflare ' +
+        'Access identity, so the server will not crawl usd489.com.');
+    }
 
     const res = await adminFetch('/admin/refresh', {method:'POST'});
     if(res.signedOut) return showSignedOut();
@@ -1089,6 +1094,10 @@ document.getElementById('refreshBtn').addEventListener('click', refresh);
 async function detectAdmin(){
   const who = await adminFetch('/admin/whoami');
   if(who.signedOut || who.networkError || !who.ok) return;  // leave it hidden
+  // Reachability is not authorisation: with no Access policy in front, this
+  // endpoint answers everyone with authenticated:false. Trust that verdict,
+  // so the button stays hidden until the edge is actually protecting /admin/.
+  if(!who.body.authenticated) return;
   const btn = document.getElementById('refreshBtn');
   btn.hidden = false;
   if(who.body.email) btn.title = `Re-crawl usd489.com (signed in as ${who.body.email})`;

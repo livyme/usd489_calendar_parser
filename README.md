@@ -30,8 +30,23 @@ Admin — everything that can reach out to usd489.com:
 The site is public, so anyone who could reach `POST /admin/refresh` could make
 this service crawl usd489.com on demand. Two things prevent that.
 
-**Cloudflare Access protects the path.** The app does *not* authenticate
-`/admin/` itself — enforcement is at the edge. In Cloudflare Zero Trust, add a
+**The admin routes fail closed.** `POST /admin/refresh` returns `403` and does
+not crawl unless the request carries a `Cf-Access-Authenticated-User-Email`
+header, which only Cloudflare Access adds. So if the Access policy is missing
+or misconfigured, refresh is disabled rather than sitting on the internet as an
+open crawl trigger. `GET /admin/whoami` reports that verdict as
+`authenticated`, and the page hides its Refresh button unless it is `true`.
+
+Note this is a presence check, not cryptographic verification — anything able
+to reach the pod directly could set the header. The real boundary is the Access
+policy plus the tunnel being the only ingress. Validating
+`Cf-Access-Jwt-Assertion` against the team JWKS would close that gap too.
+
+For local development there is no Access in front, so set
+`ALLOW_INSECURE_ADMIN=1` to permit admin actions (`docker-compose.yml` already
+does). Never set it on anything reachable from the internet.
+
+**Cloudflare Access supplies the identity.** In Cloudflare Zero Trust, add a
 self-hosted application covering the **whole prefix**:
 
 ```
@@ -170,6 +185,7 @@ replica is the right trade rather than adding shared state to work around it.
 | `STATIC_DIR` | `./static` | UI shell location |
 | `REFRESH_ON_START` | unset | set to `1` to crawl at startup instead of trusting the cache |
 | `MIN_REFRESH_INTERVAL` | `300` | seconds between permitted crawls; `0` disables the throttle |
+| `ALLOW_INSECURE_ADMIN` | unset | set to `1` to allow `/admin/` without a Cloudflare Access identity — local development only |
 
 ## How the data is cached
 

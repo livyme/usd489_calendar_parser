@@ -15,6 +15,10 @@ services:
       HOST: 0.0.0.0
       PORT: "8489"
       CACHE_DIR: /data
+      # No Cloudflare Access in front locally, and /admin/ fails closed without
+      # an Access identity, so opt in explicitly here. Never set in a
+      # deployment reachable from the internet.
+      ALLOW_INSECURE_ADMIN: "1"
       UV_PROJECT_ENVIRONMENT: /venv
       UV_COMPILE_BYTECODE: "1"
       # cache volume and /venv are separate filesystems, so hardlinks are unavailable
@@ -36,6 +40,8 @@ services:
     build:
       context: .
     read_only: true
+    environment:
+      ALLOW_INSECURE_ADMIN: "1"
     tmpfs:
       - /tmp
     volumes:
