@@ -13,4 +13,4 @@ labels:
 # tagged image. Edit by hand only to roll back to an older version.
 images:
   - name: ghcr.io/livyme/usd489_calendar_parser
-    newTag: latest
+    newTag: 0.0.0
