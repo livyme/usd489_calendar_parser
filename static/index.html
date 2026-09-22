@@ -225,6 +225,8 @@
   .provenance .stale{color:var(--accent-text);font-weight:600;}
   .provenance .prov-line{display:block;}
   .provenance .prov-line + .prov-line{margin-top:2px;}
+  /* The same control as the masthead's, sized to sit in a sentence. */
+  .btn-inline{padding:4px 11px;font-size:.78rem;vertical-align:baseline;}
   .provenance a.src{font-weight:600;}
   .provenance strong{color:var(--text-soft);font-weight:600;}
   .actions{display:flex;gap:8px;align-items:center;}
@@ -681,7 +683,9 @@
 
   <section class="card">
     <h2>Subscribe on your phone</h2>
-    <p>On iPhone or Mac, tap <strong>Subscribe</strong> above &mdash; or add this URL by hand
+    <p>On iPhone or Mac, <a class="btn btn-primary btn-inline" id="subscribeHere" href="/calendar.ics">
+         <span class="ico" aria-hidden="true">&#9993;</span>Subscribe</a>
+       &mdash; or add this URL by hand
        (Calendar &rarr; Add Calendar &rarr; Add Subscription Calendar):</p>
     <div class="urlrow">
       <code id="webcalUrl"></code>
@@ -978,6 +982,7 @@ function renderMeta(){
   const webcalHref = icsUrl.href.replace(/^https?:/, 'webcal:');
 
   document.getElementById('icsBtn').href = webcalHref;
+  document.getElementById('subscribeHere').href = webcalHref;
   document.getElementById('webcalUrl').textContent = webcalHref;
   document.getElementById('httpsUrl').textContent = icsUrl.href;
   document.getElementById('icsDownload').href = icsUrl.href;
