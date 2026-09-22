@@ -752,9 +752,50 @@ const state = { data:null, filter:'upcoming', query:'' };
 
 const pillLabel = e => PILL[e.tag] || (e.noSchool ? 'No school' : 'Note');
 
+/* Contiguous runs of the same title, derived the same way the .ics feed does
+   (ical_feed._spans), so the page and a subscription describe a closure
+   identically. The PDF's own per-month ranges can't cross a month boundary --
+   Winter Recess arrives as "Dec 21-31" plus "Jan 1-4" -- so the event's
+   `range` field is deliberately not used here. */
+function buildSpans(events){
+  const byTitle = new Map();
+  for(const e of events){
+    if(!byTitle.has(e.title)) byTitle.set(e.title, []);
+    byTitle.get(e.title).push(e.date);
+  }
+  const map = new Map();
+  for(const [title, dates] of byTitle){
+    dates.sort();
+    let start = null, end = null, run = [];
+    const flush = () => {
+      for(const d of run) map.set(title+'|'+d, {start, end});
+      run = [];
+    };
+    for(const date of dates){
+      const day = parseDate(date);
+      if(end && dayDiff(end, day) === 1){ end = day; run.push(date); continue; }
+      flush();
+      start = end = day; run = [date];
+    }
+    flush();
+  }
+  return map;
+}
+
+/* Memoised on the events array itself, so a refresh that replaces the data
+   rebuilds it and an ordinary re-render doesn't. */
+let spanCache = { src:null, map:new Map() };
+function spanMap(){
+  const events = state.data ? state.data.events : [];
+  if(spanCache.src !== events) spanCache = { src:events, map:buildSpans(events) };
+  return spanCache.map;
+}
+
 function rangeLabel(e){
-  if(!e.range) return '';
-  const [a,b] = e.range.split('/').map(parseDate);
+  const span = spanMap().get(e.title+'|'+e.date);
+  if(!span) return '';
+  const [a,b] = [span.start, span.end];
+  if(dayDiff(a,b) === 0) return '';
   return a.getMonth()===b.getMonth()
     ? `${fmtMonShort(a)} ${a.getDate()}–${b.getDate()}`
     : `${fmtMonShort(a)} ${a.getDate()} – ${fmtMonShort(b)} ${b.getDate()}`;
