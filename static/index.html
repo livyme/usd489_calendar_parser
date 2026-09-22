@@ -902,10 +902,17 @@ function renderSource(){
   if(!meta.retrievedAt){ el.textContent = ''; return; }
 
   const at = new Date(meta.retrievedAt);
+  // Calendar days apart, not elapsed 24-hour periods. A crawl at 11:21 one day
+  // is "yesterday" by 09:00 the next, even though only 21 hours have passed;
+  // measuring elapsed time called that "today" until the clock came round.
+  // Uses the same midnight the list does, so the label and the Today row agree.
+  //
   // Clamped at 0: retrievedAt is truncated to whole seconds server-side, so
   // just after a refresh it can sit a fraction of a second ahead of the
-  // browser clock, and a bare Math.floor of that turns into "-1 days ago".
-  const age = Math.max(0, Math.floor((Date.now()-at.getTime())/86400000));
+  // browser clock, and a bare subtraction of that turns into "-1 days ago".
+  const atMidnight = new Date(at);
+  atMidnight.setHours(0, 0, 0, 0);
+  const age = Math.max(0, dayDiff(atMidnight, today));
   const ageText = age===0 ? 'today' : age===1 ? 'yesterday' : age+' days ago';
   const stale = age >= 120 ? ' class="stale"' : '';
 
