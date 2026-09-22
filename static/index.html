@@ -262,8 +262,6 @@
     color:var(--on-accent);
   }
   .btn .ico{font-size:.9em;line-height:1;}
-  .spin{display:inline-block;animation:spin 900ms linear infinite;}
-  @keyframes spin{to{transform:rotate(360deg);}}
 
   /* ---- toolbar --------------------------------------------------------- */
   .toolbar{
@@ -652,10 +650,6 @@
       <a class="btn btn-primary" id="icsBtn" href="/calendar.ics">
         <span class="ico" aria-hidden="true">&#9993;</span>Subscribe
       </a>
-      <button class="btn" id="refreshBtn" hidden
-              title="Re-download the district PDF and re-parse it">
-        <span class="ico" id="refreshIco" aria-hidden="true">&#8635;</span>Refresh
-      </button>
     </span>
   </div>
 
@@ -1022,80 +1016,6 @@ async function load(){
    response, and a non-JSON content type catches the variants that return the
    login page with a 200. Either way we call it signed out rather than letting
    JSON.parse fail and surface as a nonsense error. */
-async function adminFetch(url, opts = {}){
-  let r;
-  try{
-    r = await fetch(url, {
-      redirect: 'manual',
-      cache: 'no-store',
-      headers: {Accept: 'application/json'},
-      ...opts,
-    });
-  }catch(err){
-    return {networkError: err.message};
-  }
-  if(r.type === 'opaqueredirect' || r.status === 0) return {signedOut: true};
-  if(r.status === 401 || r.status === 403) return {signedOut: true};
-  if(!(r.headers.get('content-type') || '').includes('application/json')){
-    return {signedOut: true};
-  }
-  let body = {};
-  try{ body = await r.json(); }catch(e){ /* empty body */ }
-  return {ok: r.ok, status: r.status, body};
-}
-
-function showSignedOut(){
-  // Hide the control again so it reflects reality, and point at the sign-in.
-  document.getElementById('refreshBtn').hidden = true;
-  document.getElementById('bannerSlot').innerHTML =
-    '<div class="banner"><span aria-hidden="true">&#9888;</span><span>' +
-    'Your admin session has expired. ' +
-    '<a href="/admin" target="_blank" rel="noopener">Sign in again</a>, ' +
-    'then reload this page to refresh.</span></div>';
-}
-
-async function refresh(){
-  const btn = document.getElementById('refreshBtn');
-  const ico = document.getElementById('refreshIco');
-  btn.disabled = true;
-  ico.classList.add('spin');
-  try{
-    // Re-check on click rather than trusting the probe from page load: an
-    // Access session can expire or be revoked in between, and we would rather
-    // say so plainly than fire a POST that comes back as a login page.
-    const who = await adminFetch('/admin/whoami');
-    if(who.signedOut) return showSignedOut();
-    if(who.networkError) return showBanner(`Could not reach the server: ${who.networkError}`);
-    if(!who.ok) return showBanner(`Refresh unavailable: HTTP ${who.status}`);
-    if(!who.body.authenticated){
-      document.getElementById('refreshBtn').hidden = true;
-      return showBanner('Refresh is limited to admins, to keep load off the ' +
-        "district's website. If this calendar looks out of date, please contact " +
-        'the admin for a refresh.');
-    }
-
-    const res = await adminFetch('/admin/refresh', {method:'POST'});
-    if(res.signedOut) return showSignedOut();
-    if(res.networkError) return showBanner(`Could not reach the server: ${res.networkError}`);
-    if(res.status === 429){
-      const secs = res.body.retryAfter;
-      return showBanner(
-        `usd489.com was crawled very recently. Try again in ${secs}s — the throttle ` +
-        `is there to avoid hammering the district's site.`);
-    }
-    if(!res.ok) throw new Error(res.body.error || `HTTP ${res.status}`);
-
-    state.data = res.body;
-    clearBanner();
-    renderAll();
-  }catch(err){
-    showBanner(`Refresh failed: ${err.message} — still showing the previously cached calendar.`);
-  }finally{
-    btn.disabled = false;
-    ico.classList.remove('spin');
-  }
-}
-
 /* ---- theme ------------------------------------------------------------ */
 const systemDark = window.matchMedia('(prefers-color-scheme: dark)');
 
@@ -1145,25 +1065,12 @@ document.getElementById('search').addEventListener('input', e=>{
   renderList();
 });
 
-document.getElementById('refreshBtn').addEventListener('click', refresh);
 
 // /admin/* sits behind Cloudflare Access. An unauthenticated visitor gets a
 // redirect to the login page, which `redirect:'manual'` surfaces as an opaque
 // response rather than JSON -- so anything other than a clean 200 means "not
 // an admin" and the Refresh button stays hidden. This is presentation only;
 // the actual enforcement is at the edge, not here.
-async function detectAdmin(){
-  const who = await adminFetch('/admin/whoami');
-  if(who.signedOut || who.networkError || !who.ok) return;  // leave it hidden
-  // Reachability is not authorisation: with no Access policy in front, this
-  // endpoint answers everyone with authenticated:false. Trust that verdict,
-  // so the button stays hidden until the edge is actually protecting /admin/.
-  if(!who.body.authenticated) return;
-  const btn = document.getElementById('refreshBtn');
-  btn.hidden = false;
-  if(who.body.email) btn.title = `Re-crawl usd489.com (signed in as ${who.body.email})`;
-}
-detectAdmin();
 
 document.querySelectorAll('.copy').forEach(btn=>{
   btn.addEventListener('click', async ()=>{
