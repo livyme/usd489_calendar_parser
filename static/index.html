@@ -437,6 +437,22 @@
     transition:transform var(--speed);
   }
   .row-run[aria-expanded="true"] .chev{transform:rotate(90deg);}
+  .row-run:hover .chev{color:var(--text);}
+  /* Sits against the title so the row reads as a group at a glance, rather
+     than leaving that job to a chevron at the far end of the row. */
+  .run-count{
+    display:inline-block;
+    margin-left:9px;
+    padding:1px 8px;
+    font-size:.68rem;
+    font-weight:600;
+    letter-spacing:.02em;
+    color:var(--text-muted);
+    background:var(--surface-sunken);
+    border:1px solid var(--border);
+    border-radius:var(--radius-pill);
+    vertical-align:1.5px;
+  }
   /* Indented and quieter than the run they belong to, so the eye can still
      find the run rows when several are open. */
   .row.is-child{padding-left:30px;border-bottom-style:dotted;}
@@ -917,7 +933,7 @@ function runRow(run, expanded){
   li.setAttribute('aria-expanded', String(expanded));
 
   const n = run.items.length;
-  const meta = [fmtRange(first.d, last.d), `${n} days`];
+  const meta = [fmtRange(first.d, last.d)];
   if(first.noSchool && first.tag !== 'holiday') meta.push('No school');
 
   li.innerHTML = `
@@ -926,7 +942,7 @@ function runRow(run, expanded){
       <span class="wd">${fmtWeekday(first.d)}</span>
     </time>
     <div class="row-main">
-      <p class="row-title">${esc(run.title)}</p>
+      <p class="row-title">${esc(run.title)}<span class="run-count">${n} days</span></p>
       <p class="row-meta">${esc(meta.join(' \u00b7 '))}</p>
     </div>
     <span class="pill pill-${esc(first.tag)}">${esc(pillLabel(first))}</span>
