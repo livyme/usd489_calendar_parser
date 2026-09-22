@@ -1,0 +1,47 @@
+# Closes the in-cluster path to the admin routes.
+#
+# The app authorises admin actions on the presence of the
+# Cf-Access-Authenticated-User-Email header, which only Cloudflare Access adds
+# on the way in. That is a presence check, not verification -- any pod that can
+# reach this Service can set the header itself and trigger a crawl of
+# usd489.com. Cloudflare protects the path from the internet; this protects it
+# from inside the cluster, so the tunnel really is the only ingress the README
+# claims it is.
+#
+# NOT referenced from kustomization.yaml yet. Fill in the namespace below
+# first: applying this with the wrong selector matches nothing, and a
+# NetworkPolicy that selects the pod with no matching ingress rule denies all
+# traffic to it -- the site would go dark.
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: usd489-calendar-ingress
+spec:
+  # Selecting the pod at all switches it from allow-all to deny-all for the
+  # listed policyTypes; only the rules below are then permitted.
+  podSelector:
+    matchLabels:
+      app: usd489-calendar
+
+  # Ingress only. Egress is left alone on purpose: a refresh has to reach
+  # usd489.com and the Thrillshare CDN, whose addresses change, and vanilla
+  # NetworkPolicy cannot match hostnames -- so locking egress down would mean
+  # allowing 443 to everything anyway, for no real gain.
+  policyTypes:
+    - Ingress
+
+  ingress:
+    # cloudflared is the only thing that should ever talk to this Service.
+    #
+    # kubernetes.io/metadata.name is set automatically by Kubernetes on every
+    # namespace (1.21+), so this selects the namespace by name without needing
+    # a hand-applied label on it. Replace the value with the namespace
+    # cloudflared runs in.
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: REPLACE_WITH_CLOUDFLARED_NAMESPACE
+      ports:
+        - port: http # the container's named port, 8489
+          protocol: TCP
