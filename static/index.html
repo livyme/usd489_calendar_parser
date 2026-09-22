@@ -428,18 +428,20 @@
   /* A run of days collapses to one row that opens on click. */
   .row-run{cursor:pointer;}
   .row-run:focus-visible{outline:2px solid var(--ring);outline-offset:-2px;}
-  .chev{
+  /* Says what clicking does, rather than leaving it to a chevron. */
+  .row-more{
     flex:0 0 auto;
     align-self:center;
-    color:var(--text-muted);
-    font-size:1.1rem;
-    line-height:1;
-    transition:transform var(--speed);
+    min-width:5.4rem;
+    text-align:right;
+    font-size:.75rem;
+    font-weight:600;
+    white-space:nowrap;
+    color:var(--accent-text);
   }
-  .row-run[aria-expanded="true"] .chev{transform:rotate(90deg);}
-  .row-run:hover .chev{color:var(--text);}
-  /* Sits against the title so the row reads as a group at a glance, rather
-     than leaving that job to a chevron at the far end of the row. */
+  .row-run:hover .row-more{text-decoration:underline;text-underline-offset:2px;}
+  /* Sits against the title so the row reads as a group at a glance, without
+     the eye having to reach the Show dates control at the far end first. */
   .run-count{
     display:inline-block;
     margin-left:9px;
@@ -946,7 +948,7 @@ function runRow(run, expanded){
       <p class="row-meta">${esc(meta.join(' \u00b7 '))}</p>
     </div>
     <span class="pill pill-${esc(first.tag)}">${esc(pillLabel(first))}</span>
-    <span class="chev" aria-hidden="true">&#8250;</span>`;
+    <span class="row-more">${expanded ? 'Hide dates' : 'Show dates'}</span>`;
   return li;
 }
 
@@ -1020,9 +1022,11 @@ function renderList(){
       return li;
     });
 
+    const label = summary.querySelector('.row-more');
     const toggle = () => {
       const now = !(summary.getAttribute('aria-expanded') === 'true');
       summary.setAttribute('aria-expanded', String(now));
+      label.textContent = now ? 'Hide dates' : 'Show dates';
       children.forEach(li => { li.hidden = !now; });
       if(now) state.expanded.add(k); else state.expanded.delete(k);
     };
