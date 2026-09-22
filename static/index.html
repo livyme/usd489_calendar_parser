@@ -223,6 +223,8 @@
     margin-bottom:clamp(18px,3vw,24px);
   }
   .provenance .stale{color:var(--accent-text);font-weight:600;}
+  .provenance .prov-line{display:block;}
+  .provenance .prov-line + .prov-line{margin-top:2px;}
   .provenance a.src{font-weight:600;}
   .provenance strong{color:var(--text-soft);font-weight:600;}
   .actions{display:flex;gap:8px;align-items:center;}
@@ -942,7 +944,10 @@ function renderSource(){
   // Repeated from the About section on purpose: this line is the one people
   // read, and the disclaimer should not depend on scrolling to find it.
   bits.push('Not affiliated with or endorsed by Hays USD 489.');
-  el.innerHTML = bits.join(' &middot; ');
+  // One per line rather than middot-separated: these are full sentences now,
+  // and at this width they wrapped mid-clause, which put the break in an
+  // arbitrary place instead of between the facts.
+  el.innerHTML = bits.map(b => `<span class="prov-line">${b}</span>`).join('');
 }
 
 function renderNotes(){
