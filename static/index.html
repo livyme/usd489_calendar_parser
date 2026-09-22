@@ -712,8 +712,8 @@
       <li><strong>It obeys robots.txt.</strong> The district allows crawling of <code>/</code> for every agent and disallows only <code>/api/</code>. This reads exactly one page &mdash; the homepage &mdash; and never touches <code>/api/</code>.</li>
       <li><strong>It identifies itself honestly.</strong> Requests are sent as
         <code id="aboutUa">usd489-calendar-bot/1.0</code>, not disguised as a browser or a search engine. The site is behind a bot challenge that turns away anything claiming to be a browser; rather than working around that by impersonating Chrome, this asks for the content as what it actually is, which is the path the district's own robots.txt permits.</li>
-      <li><strong>It almost never asks.</strong> Loading this page sends <em>zero</em> requests to usd489.com &mdash; you're reading a cached copy. The district's site is contacted only when someone presses <strong>Refresh</strong>: no polling, no timer, no fetch per visitor. A school calendar is published once and rarely changes, so in practice that's a couple of requests a year.</li>
-      <li><strong>Two requests per refresh, one at a time.</strong> A refresh fetches the homepage and then the PDF &mdash; nothing else, no spidering of other pages. Concurrent refreshes are locked out, so repeated clicking can't pile requests onto the site.</li>
+      <li><strong>It almost never asks.</strong> Loading this page sends <em>zero</em> requests to usd489.com &mdash; you're reading a cached copy. The district's site is contacted only when an admin presses <strong>Refresh</strong> on the admin page: no polling, no timer, no fetch per visitor. A school calendar is published once and rarely changes, so in practice that's a couple of requests a year.</li>
+      <li><strong>Two requests per refresh, one at a time.</strong> A refresh fetches the homepage and then the PDF &mdash; nothing else, no spidering of other pages. Concurrent refreshes are locked out and a minimum interval is enforced, so repeated clicking can't pile requests onto the site.</li>
       <li><strong>It never republishes their file.</strong> The PDF isn't mirrored here; the link above points at the district's own copy, so they stay the source of record.</li>
     </ul>
 
@@ -776,8 +776,8 @@ function buildSpans(events){
   return map;
 }
 
-/* Memoised on the events array itself, so a refresh that replaces the data
-   rebuilds it and an ordinary re-render doesn't. */
+/* Memoised on the events array itself, so filtering and searching re-render
+   without rebuilding it. */
 let spanCache = { src:null, map:new Map() };
 function spanMap(){
   const events = state.data ? state.data.events : [];
@@ -1064,13 +1064,6 @@ document.getElementById('search').addEventListener('input', e=>{
   state.query = e.target.value;
   renderList();
 });
-
-
-// /admin/* sits behind Cloudflare Access. An unauthenticated visitor gets a
-// redirect to the login page, which `redirect:'manual'` surfaces as an opaque
-// response rather than JSON -- so anything other than a clean 200 means "not
-// an admin" and the Refresh button stays hidden. This is presentation only;
-// the actual enforcement is at the edge, not here.
 
 document.querySelectorAll('.copy').forEach(btn=>{
   btn.addEventListener('click', async ()=>{

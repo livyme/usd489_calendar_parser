@@ -36,7 +36,8 @@ not crawl unless the request carries a `Cf-Access-Authenticated-User-Email`
 header, which only Cloudflare Access adds. So if the Access policy is missing
 or misconfigured, refresh is disabled rather than sitting on the internet as an
 open crawl trigger. `GET /admin/whoami` reports that verdict as
-`authenticated`, and the page hides its Refresh button unless it is `true`.
+`authenticated`, which is the quickest way to check a policy is really in
+front: reaching it at all and seeing `false` means it is not.
 
 Note this is a presence check, not cryptographic verification — anything able
 to reach the pod directly could set the header. The real boundary is the Access
@@ -211,8 +212,9 @@ poller. At startup the app loads, in order of preference:
 
 **Startup does no network I/O at all.** A cold pod is ready immediately and serves usable
 data even if usd489.com is down. usd489.com is contacted only when someone calls
-`POST /admin/refresh` (the Refresh button) — not on page load, not on a timer, not per
-visitor.
+`POST /admin/refresh` — via the Refresh button on `/admin`, or directly — not on page
+load, not on a timer, not per visitor. The public calendar page ships no admin controls
+and makes exactly two requests of its own: `GET /` and `GET /api/calendar`.
 
 To refresh the seed baked into the image:
 

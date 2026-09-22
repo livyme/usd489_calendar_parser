@@ -30,7 +30,7 @@ background poller. Data is loaded at startup from, in order of preference:
 
 Startup therefore does no network I/O at all: a cold pod is ready immediately
 and serves usable data even if usd489.com is down. Refresh is explicit, via
-POST /admin/refresh (the Refresh button, shown only to an authenticated admin).
+POST /admin/refresh, from the Refresh button on the /admin page.
 """
 
 from __future__ import annotations
@@ -497,18 +497,20 @@ class Handler(BaseHTTPRequestHandler):
         )
 
     def _serve_whoami(self) -> None:
-        """Report the Cloudflare Access identity, for the UI to gate on.
+        """Report the Cloudflare Access identity, as a diagnostic.
 
-        Reaching this at all means Access let the request through, so the UI
-        treats a 200 as "show the Refresh button". Unauthenticated callers get
-        a redirect to the Access login page and never see this handler.
+        Nothing in the UI calls this any more -- /admin renders the identity
+        itself. It stays because it is the quickest way to confirm an Access
+        policy really is in front: reaching it and seeing authenticated:false
+        means the edge is not protecting /admin/, whereas an unauthenticated
+        caller behind a working policy gets the login redirect instead.
         """
         email = self._admin_identity()
         self._json(
             HTTPStatus.OK,
             {
-                # "may this caller refresh", which is what the UI gates on --
-                # not merely "did this request arrive".
+                # "may this caller refresh", not merely "did this request
+                # arrive" -- reachability was never authorisation.
                 "authenticated": self._admin_allowed(),
                 "email": email,
                 "insecureAdminAllowed": ALLOW_INSECURE_ADMIN,
