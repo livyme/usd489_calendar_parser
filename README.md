@@ -222,6 +222,25 @@ To refresh the seed baked into the image:
 uv run calendar_source.py --out seed/calendar.json
 ```
 
+### Refreshing across a school-year boundary
+
+A refresh replaces the dataset wholesale — `STORE.refresh()` assigns the newly parsed
+payload over the old one, and the PDF covers exactly one school year. So when the district
+swaps in the 2027–2028 calendar, which it typically does in spring while 2026–27 is still
+running, refreshing at that moment drops the rest of the current year from the feed.
+Refresh in February and subscribers could lose that year's spring break from their
+calendars.
+
+Nothing guards against this, deliberately: refresh is manual, so the timing is a judgement
+call rather than something the code should decide. If you hit it, the options are to hold
+off refreshing until the current year has run out, or to merge the two years by hand into
+`$CACHE_DIR/calendar.json`. Worth checking what the district actually publishes when it
+happens — if they keep both years reachable, the nav-link picker may well pick the wrong
+one, which is a separate thing to look at.
+
+Note the feed's name is year-agnostic (`Hays USD 489 District Calendar`) precisely so a
+subscription survives this transition; only its contents change.
+
 ## How the calendar is found and parsed
 
 1. **Fetch the homepage.** The site's nav ships inside the page as an escaped JSON blob;
