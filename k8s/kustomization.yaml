@@ -5,6 +5,7 @@ namespace: l-usd489-calendar
 resources:
   - deployment.yaml
   - service.yaml
+  - networkpolicy.yaml
 labels:
   - pairs:
       app.kubernetes.io/name: usd489-calendar

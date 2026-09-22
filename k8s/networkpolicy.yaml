@@ -8,10 +8,10 @@
 # from inside the cluster, so the tunnel really is the only ingress the README
 # claims it is.
 #
-# NOT referenced from kustomization.yaml yet. Fill in the namespace below
-# first: applying this with the wrong selector matches nothing, and a
-# NetworkPolicy that selects the pod with no matching ingress rule denies all
-# traffic to it -- the site would go dark.
+# Note this denies by default: if cloudflared ever moves out of k-cloudflare,
+# or the tunnel is pointed at this Service from somewhere else, the site goes
+# dark rather than warning. The namespace below is the only thing permitting
+# traffic in.
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -35,13 +35,12 @@ spec:
     # cloudflared is the only thing that should ever talk to this Service.
     #
     # kubernetes.io/metadata.name is set automatically by Kubernetes on every
-    # namespace (1.21+), so this selects the namespace by name without needing
-    # a hand-applied label on it. Replace the value with the namespace
-    # cloudflared runs in.
+    # namespace (1.21+), so this selects k-cloudflare by name without needing a
+    # hand-applied label on it.
     - from:
         - namespaceSelector:
             matchLabels:
-              kubernetes.io/metadata.name: REPLACE_WITH_CLOUDFLARED_NAMESPACE
+              kubernetes.io/metadata.name: k-cloudflare
       ports:
         - port: http # the container's named port, 8489
           protocol: TCP

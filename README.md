@@ -57,20 +57,14 @@ Verified by posting to `/admin/refresh` with the header set by hand — it retur
 `200` and crawls, with no Access anywhere in the picture. The throttle bounds
 that to one crawl per `MIN_REFRESH_INTERVAL`, but it does not prevent it.
 
-[`k8s/networkpolicy.yaml`](k8s/networkpolicy.yaml) restricts ingress to the
-namespace `cloudflared` runs in, so the tunnel really is the only way in. It is
-**not referenced from `kustomization.yaml`**, because it needs one edit first and
-a wrong selector is an outage rather than a warning: a NetworkPolicy that selects
-the pod but matches no source denies everything reaching it.
+[`k8s/networkpolicy.yaml`](k8s/networkpolicy.yaml) restricts ingress to
+`k-cloudflare`, the namespace `cloudflared` runs in, so the tunnel really is the
+only way in. The selector uses `kubernetes.io/metadata.name`, which Kubernetes
+sets on every namespace itself, so `k-cloudflare` needs no hand-applied label.
 
-To turn it on:
-
-1. Replace `REPLACE_WITH_CLOUDFLARED_NAMESPACE` with the namespace `cloudflared`
-   runs in. The selector uses `kubernetes.io/metadata.name`, which Kubernetes
-   sets on every namespace itself, so the namespace needs no hand-applied label.
-2. Add `- networkpolicy.yaml` to `resources:` in
-   [`k8s/kustomization.yaml`](k8s/kustomization.yaml).
-3. Confirm the pod stays ready, and that the site still loads through the tunnel.
+It denies by default, and that cuts both ways: if `cloudflared` ever moves out of
+`k-cloudflare`, the site goes dark rather than warning. After the first sync,
+confirm the pod is still ready and the site still loads through the tunnel.
 
 Two things to check on your cluster, because both fail quietly:
 
@@ -333,8 +327,8 @@ calendar_source.py     crawl + parse (importable; also a CLI for seeding)
 ical_feed.py           RFC 5545 feed rendering
 static/index.html      UI shell (inline CSS/JS, renders from /api/calendar)
 seed/calendar.json     seed cache baked into the image
-k8s/                   Deployment + ClusterIP Service (ns l-usd489-calendar),
-                       plus a NetworkPolicy that is staged but not yet wired in
+k8s/                   Deployment, ClusterIP Service and a NetworkPolicy
+                       restricting ingress to k-cloudflare (ns l-usd489-calendar)
 .github/workflows/     on a v* tag: smoke-test, publish to ghcr.io, pin the tag in k8s/
 ```
 
