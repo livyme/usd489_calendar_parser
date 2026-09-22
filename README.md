@@ -48,6 +48,41 @@ For local development there is no Access in front, so set
 `ALLOW_INSECURE_ADMIN=1` to permit admin actions (`docker-compose.yml` already
 does). Never set it on anything reachable from the internet.
 
+### Closing the in-cluster path
+
+Cloudflare guards the admin routes from the internet, but a presence check on a
+header is no defence from *inside* the cluster: any pod that can reach the
+Service can set `Cf-Access-Authenticated-User-Email` itself and trigger a crawl.
+Verified by posting to `/admin/refresh` with the header set by hand — it returns
+`200` and crawls, with no Access anywhere in the picture. The throttle bounds
+that to one crawl per `MIN_REFRESH_INTERVAL`, but it does not prevent it.
+
+[`k8s/networkpolicy.yaml`](k8s/networkpolicy.yaml) restricts ingress to the
+namespace `cloudflared` runs in, so the tunnel really is the only way in. It is
+**not referenced from `kustomization.yaml`**, because it needs one edit first and
+a wrong selector is an outage rather than a warning: a NetworkPolicy that selects
+the pod but matches no source denies everything reaching it.
+
+To turn it on:
+
+1. Replace `REPLACE_WITH_CLOUDFLARED_NAMESPACE` with the namespace `cloudflared`
+   runs in. The selector uses `kubernetes.io/metadata.name`, which Kubernetes
+   sets on every namespace itself, so the namespace needs no hand-applied label.
+2. Add `- networkpolicy.yaml` to `resources:` in
+   [`k8s/kustomization.yaml`](k8s/kustomization.yaml).
+3. Confirm the pod stays ready, and that the site still loads through the tunnel.
+
+Two things to check on your cluster, because both fail quietly:
+
+- **The CNI must enforce NetworkPolicy.** Flannel alone ignores these objects
+  entirely, so the manifest would apply cleanly, report no error, and protect
+  nothing. Calico, Cilium and k3s's built-in controller all enforce it.
+- **Liveness and readiness probes come from the kubelet, not a pod**, so no
+  `podSelector` can match them. Most CNIs permit node-to-pod traffic regardless;
+  if yours does not, the probes start failing and the pod restart-loops. The fix
+  is an extra `from: [ipBlock: {cidr: <node CIDR>}]` rule, which is why step 3
+  is checking readiness rather than assuming it.
+
 **Cloudflare Access supplies the identity.** In Cloudflare Zero Trust go to
 Access controls → Applications → Create new application → Self-hosted, and add
 **two** path entries with the same policy:
@@ -298,7 +333,8 @@ calendar_source.py     crawl + parse (importable; also a CLI for seeding)
 ical_feed.py           RFC 5545 feed rendering
 static/index.html      UI shell (inline CSS/JS, renders from /api/calendar)
 seed/calendar.json     seed cache baked into the image
-k8s/                   Deployment + ClusterIP Service (ns l-usd489-calendar)
+k8s/                   Deployment + ClusterIP Service (ns l-usd489-calendar),
+                       plus a NetworkPolicy that is staged but not yet wired in
 .github/workflows/     on a v* tag: smoke-test, publish to ghcr.io, pin the tag in k8s/
 ```
 
