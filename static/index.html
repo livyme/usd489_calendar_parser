@@ -428,18 +428,22 @@
   /* A run of days collapses to one row that opens on click. */
   .row-run{cursor:pointer;}
   .row-run:focus-visible{outline:2px solid var(--ring);outline-offset:-2px;}
-  /* Says what clicking does, rather than leaving it to a chevron. */
+  /* Sits inside the title line, next to the count, so the type pill stays the
+     last child of the row and keeps its column with every ungrouped row. */
   .row-more{
-    flex:0 0 auto;
-    align-self:center;
-    min-width:5.4rem;
-    text-align:right;
-    font-size:.75rem;
+    display:inline-flex;
+    align-items:center;
+    gap:3px;
+    margin-left:10px;
+    font-size:.72rem;
     font-weight:600;
     white-space:nowrap;
     color:var(--accent-text);
+    vertical-align:1px;
   }
-  .row-run:hover .row-more{text-decoration:underline;text-underline-offset:2px;}
+  .chev{display:inline-block;font-size:.95rem;line-height:1;transition:transform var(--speed);}
+  .row-run[aria-expanded="true"] .chev{transform:rotate(90deg);}
+  .row-run:hover .row-more-text{text-decoration:underline;text-underline-offset:2px;}
   /* Sits against the title so the row reads as a group at a glance, without
      the eye having to reach the Show dates control at the far end first. */
   .run-count{
@@ -944,11 +948,12 @@ function runRow(run, expanded){
       <span class="wd">${fmtWeekday(first.d)}</span>
     </time>
     <div class="row-main">
-      <p class="row-title">${esc(run.title)}<span class="run-count">${n} days</span></p>
+      <p class="row-title">${esc(run.title)}<span class="run-count">${n} days</span><span
+        class="row-more"><span class="chev" aria-hidden="true">&#8250;</span><span
+        class="row-more-text">${expanded ? 'Collapse' : 'Expand'}</span></span></p>
       <p class="row-meta">${esc(meta.join(' \u00b7 '))}</p>
     </div>
-    <span class="pill pill-${esc(first.tag)}">${esc(pillLabel(first))}</span>
-    <span class="row-more">${expanded ? 'Hide dates' : 'Show dates'}</span>`;
+    <span class="pill pill-${esc(first.tag)}">${esc(pillLabel(first))}</span>`;
   return li;
 }
 
@@ -1022,11 +1027,11 @@ function renderList(){
       return li;
     });
 
-    const label = summary.querySelector('.row-more');
+    const label = summary.querySelector('.row-more-text');
     const toggle = () => {
       const now = !(summary.getAttribute('aria-expanded') === 'true');
       summary.setAttribute('aria-expanded', String(now));
-      label.textContent = now ? 'Hide dates' : 'Show dates';
+      label.textContent = now ? 'Collapse' : 'Expand';
       children.forEach(li => { li.hidden = !now; });
       if(now) state.expanded.add(k); else state.expanded.delete(k);
     };
