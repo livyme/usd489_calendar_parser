@@ -881,7 +881,7 @@ function runsOf(items){
     list.sort((a, b) => a.d - b.d);
     let cur = null;
     for(const e of list){
-      if(cur && dayDiff(cur.items[cur.items.length - 1].d, e.d) === 1){
+      if(cur && nextSchoolDay(cur.items[cur.items.length - 1].d, e.d)){
         cur.items.push(e);
         continue;
       }
@@ -893,7 +893,36 @@ function runsOf(items){
   return runs;
 }
 
+/* True when nothing but a weekend separates the two days. Conferences are
+   listed Friday and Monday -- the district writes them as one span and the
+   weekend between is not a conference day -- so on screen they are one
+   period of two days, even though the feed rightly emits them as two
+   separate events. */
+function nextSchoolDay(prev, next){
+  const cursor = new Date(prev);
+  cursor.setDate(cursor.getDate() + 1);
+  while(cursor < next){
+    const wd = cursor.getDay();
+    if(wd !== 0 && wd !== 6) return false;
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return dayDiff(prev, next) >= 1;
+}
+
 const runKey = run => run.title + '|' + run.items[0].date;
+
+/* A run bridged across a weekend covers fewer days than its endpoints span,
+   so "Mar 26-29 - 2 days" would read as a contradiction. Name both days
+   instead. */
+function runDates(first, last, n){
+  if(dayDiff(first, last) + 1 === n) return fmtRange(first, last);
+  if(n === 2){
+    return first.getMonth() === last.getMonth()
+      ? `${fmtMonShort(first)} ${first.getDate()} & ${last.getDate()}`
+      : `${fmtMonShort(first)} ${first.getDate()} & ${fmtMonShort(last)} ${last.getDate()}`;
+  }
+  return fmtRange(first, last);
+}
 
 function dayRow(e, isChild){
   const isToday = sameDay(e.d, today);
@@ -939,7 +968,7 @@ function runRow(run, expanded){
   li.setAttribute('aria-expanded', String(expanded));
 
   const n = run.items.length;
-  const meta = [fmtRange(first.d, last.d)];
+  const meta = [runDates(first.d, last.d, n)];
   if(first.noSchool && first.tag !== 'holiday') meta.push('No school');
 
   li.innerHTML = `
