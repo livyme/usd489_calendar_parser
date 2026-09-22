@@ -225,6 +225,21 @@
   .provenance .stale{color:var(--accent-text);font-weight:600;}
   .provenance .prov-line{display:block;}
   .provenance .prov-line + .prov-line{margin-top:2px;}
+  /* The first provenance line is far the longest, so give it the whole row and
+     tuck the button in beside the three shorter ones rather than pushing it
+     onto a row of its own. display:contents lifts the generated .prov-line
+     spans out of #sourceInfo so they can be grid items themselves.
+     Narrow screens keep the flex stacking above. */
+  @media (min-width:700px){
+    .provenance{
+      display:grid; grid-template-columns:1fr auto;
+      column-gap:16px; row-gap:2px; align-items:center;
+    }
+    .provenance #sourceInfo{display:contents;}
+    .provenance .prov-line{grid-column:1; margin-top:0;}
+    .provenance .prov-line:first-child{grid-column:1 / -1;}
+    .provenance .actions{grid-column:2; grid-row:2 / span 3;}
+  }
   .provenance a.src{font-weight:600;}
   .provenance strong{color:var(--text-soft);font-weight:600;}
   .actions{display:flex;gap:8px;align-items:center;}
