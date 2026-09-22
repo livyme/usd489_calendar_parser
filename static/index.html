@@ -920,11 +920,12 @@ function renderSource(){
 
   // Lead with the source, and hang the PDF link on that phrase rather than
   // carrying a second "Source PDF" link for the same target.
-  const name = 'official district calendar';
+  const name = 'official district calendar PDF file';
+  const tail = ' for easy access of no school days.';
   const bits = [
     meta.pdfUrl
-      ? `From the <a class="src" href="${esc(meta.pdfUrl)}" target="_blank" rel="noopener">${name}</a>`
-      : `From the <strong>${name}</strong>`,
+      ? `Parsed from the <a class="src" href="${esc(meta.pdfUrl)}" target="_blank" rel="noopener">${name}</a>${tail}`
+      : `Parsed from the <strong>${name}</strong>${tail}`,
     `Retrieved <span${stale}>${esc(ageText)}</span> ${esc(time)}`,
   ];
   if(meta.pdfLastModified){
@@ -932,10 +933,13 @@ function renderSource(){
     if(!isNaN(lm)){
       // "Dated" rather than "updated": this is the file's Last-Modified, not
       // an editorial revision date.
-      bits.push(`Dated ${esc(lm.toLocaleDateString('en-US',
+      bits.push(`Official PDF calendar dated ${esc(lm.toLocaleDateString('en-US',
         {month: '2-digit', day: '2-digit', year: 'numeric'}))}`);
     }
   }
+  // Repeated from the About section on purpose: this line is the one people
+  // read, and the disclaimer should not depend on scrolling to find it.
+  bits.push('Not affiliated with or endorsed by Hays USD 489.');
   el.innerHTML = bits.join(' &middot; ');
 }
 
