@@ -145,13 +145,23 @@ git push origin v1.0.0
 
 [`.github/workflows/build-image.yml`](.github/workflows/build-image.yml) then:
 
-1. builds the image for amd64 and **runs it**, asserting the container becomes ready from
-   its baked-in seed, that the API returns events, and that the iCal feed parses with
-   unique UIDs — nothing is published if any of that fails;
-2. publishes multi-arch (amd64 + arm64) to `ghcr.io/livyme/usd489_calendar_parser`, tagged
-   `1.0.0`, `1.0`, `sha-<commit>` and `latest`;
+1. builds the image **once**, for amd64, and **runs it** — asserting the container becomes
+   ready from its baked-in seed, that the API returns events, and that the iCal feed parses
+   with unique UIDs;
+2. pushes *that* image, the one that just passed, to
+   `ghcr.io/livyme/usd489_calendar_parser`, tagged `1.0.0`, `1.0`, `sha-<commit>` and
+   `latest`. The registry credential is only added to the job after the tests pass, so a
+   failure cannot publish anything;
 3. commits the new version into `newTag:` in
    [`k8s/kustomization.yaml`](k8s/kustomization.yaml) on `main`.
+
+Published images are **amd64 only**. Buildx cannot `--load` a multi-platform manifest into
+the local daemon, so smoke testing a multi-arch build would mean building twice and
+publishing a rebuild of what was tested rather than the tested bytes themselves. The
+cluster is amd64, so the single build wins on both counts. Local testing on an arm64 Mac
+is unaffected — `docker compose --profile image up --build calendar-image` builds natively
+from the Dockerfile rather than pulling from ghcr. Add `platforms:` back to the build step
+if a second architecture ever needs to run this.
 
 So after the workflow finishes, deploying is just:
 
