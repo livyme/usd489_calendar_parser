@@ -32,15 +32,27 @@ spec:
     - Ingress
 
   ingress:
-    # cloudflared is the only thing that should ever talk to this Service.
+    # The tunnel is the only thing that should ever talk to this Service.
     #
     # kubernetes.io/metadata.name is set automatically by Kubernetes on every
     # namespace (1.21+), so this selects k-cloudflare by name without needing a
     # hand-applied label on it.
+    #
+    # namespaceSelector and podSelector are keys of the SAME list item, which
+    # means AND: the source must be the tunnel pod *and* be in k-cloudflare. As
+    # two separate list items it would mean OR -- any pod in k-cloudflare, or
+    # any pod labelled app=tunnel-talos in any namespace -- which is weaker
+    # than it looks and easy to write by accident.
+    #
+    # app=tunnel-talos is the tunnel Deployment's own label; pod-template-hash
+    # is deliberately not matched, since it changes on every rollout.
     - from:
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: k-cloudflare
+          podSelector:
+            matchLabels:
+              app: tunnel-talos
       ports:
         - port: http # the container's named port, 8489
           protocol: TCP

@@ -57,20 +57,28 @@ Verified by posting to `/admin/refresh` with the header set by hand — it retur
 `200` and crawls, with no Access anywhere in the picture. The throttle bounds
 that to one crawl per `MIN_REFRESH_INTERVAL`, but it does not prevent it.
 
-[`k8s/networkpolicy.yaml`](k8s/networkpolicy.yaml) restricts ingress to
-`k-cloudflare`, the namespace `cloudflared` runs in, so the tunnel really is the
-only way in. The selector uses `kubernetes.io/metadata.name`, which Kubernetes
-sets on every namespace itself, so `k-cloudflare` needs no hand-applied label.
+[`k8s/networkpolicy.yaml`](k8s/networkpolicy.yaml) restricts ingress to the
+tunnel pod itself — `app=tunnel-talos` in namespace `k-cloudflare` — so the
+tunnel really is the only way in. Both selectors sit in one `from` element, which
+means AND; as two elements it would mean "anything in `k-cloudflare`, *or*
+anything labelled `app=tunnel-talos` anywhere", which is an easy mistake to make
+and much weaker. The namespace is matched on
+`kubernetes.io/metadata.name`, which Kubernetes sets itself, so `k-cloudflare`
+needs no hand-applied label.
 
-It denies by default, and that cuts both ways: if `cloudflared` ever moves out of
-`k-cloudflare`, the site goes dark rather than warning. After the first sync,
+It denies by default, and that cuts both ways: if the tunnel is renamed,
+relabelled or moved out of `k-cloudflare`, the site goes dark rather than
+warning. After the first sync,
 confirm the pod is still ready and the site still loads through the tunnel.
 
 Two things to check on your cluster, because both fail quietly:
 
 - **The CNI must enforce NetworkPolicy.** Flannel alone ignores these objects
-  entirely, so the manifest would apply cleanly, report no error, and protect
-  nothing. Calico, Cilium and k3s's built-in controller all enforce it.
+  entirely, so the manifest applies cleanly, reports no error, and protects
+  nothing. Calico and Cilium enforce it. This matters here: Talos ships Flannel
+  by default, so unless this cluster had a policy-capable CNI installed
+  deliberately, treat the manifest as documentation of intent and not as a
+  control. `kubectl get pods -n kube-system` settles it.
 - **Liveness and readiness probes come from the kubelet, not a pod**, so no
   `podSelector` can match them. Most CNIs permit node-to-pod traffic regardless;
   if yours does not, the probes start failing and the pod restart-loops. The fix
