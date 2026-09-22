@@ -83,28 +83,18 @@ Two quiet failure modes worth knowing about:
   is an extra `from: [ipBlock: {cidr: <node CIDR>}]` rule — which is why it is
   worth watching readiness after the first sync rather than assuming it.
 
-**Cloudflare Access supplies the identity.** In Cloudflare Zero Trust go to
-Access controls → Applications → Create new application → Self-hosted, and add
-**two** path entries with the same policy:
+**Cloudflare Access supplies the identity.** Configuring it is Cloudflare's
+business rather than this repo's — see [application paths][paths] — but two
+requirements come from how this app is routed:
 
-```
-Public hostname:  <your-host>   path: admin      (the status page)
-Public hostname:  <your-host>   path: admin/*    (whoami + refresh)
-Policy:           Allow — Emails — <your email>
-```
+- Cover **both** `admin` and `admin/*`. Cloudflare treats those as different
+  paths: `admin` alone does not cover `/admin/refresh`, and `admin/*` alone does
+  not cover `/admin`. Protecting only the first leaves the crawl trigger open.
+- Do **not** cover `/`. The calendar page, the iCal feed and the Kubernetes
+  probes all live there and must stay anonymous.
 
-Both are required. A path of `admin` covers only `/admin` and does *not* cover
-`/admin/refresh`, while `admin/*` covers everything beneath `/admin` but not
-`/admin` itself — see Cloudflare's [application paths][paths] docs. Protecting
-only `admin` leaves the real endpoints open; protecting only `admin/*` leaves
-the status page reporting "no identity" to everyone. If the dashboard accepts
-just one hostname per application, make two applications.
-
-Do **not** add an application covering `/`, or the calendar page, the iCal feed
-and the Kubernetes probes will all start demanding a login.
-
-Visit `<your-host>/admin` to check the result: it shows the identity Access
-passed through and whether refreshing is permitted. If it loads but reports no
+Visit `/admin` to check the result: it reports the identity Access passed
+through, and whether refreshing is permitted. If it loads but reports no
 identity, Access is not in front of that path.
 
 [paths]: https://developers.cloudflare.com/cloudflare-one/access-controls/policies/app-paths/
