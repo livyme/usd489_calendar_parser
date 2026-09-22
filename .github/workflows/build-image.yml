@@ -97,7 +97,16 @@ jobs:
           grep -q '"source": "seed"' /tmp/readyz
 
           # The UI shell and the JSON API.
-          curl -fsS http://127.0.0.1:8489/ | grep -q 'Hays USD 489 Closures'
+          #
+          # Downloaded before grepping rather than piped into grep -q. grep -q
+          # exits the moment it matches, and the title is at the top of the
+          # document, so it closes the pipe while curl still has the rest of
+          # the page to write; curl then fails with EPIPE (exit 23) and
+          # pipefail fails the step. That is a race on how much of the body is
+          # still outstanding, so it passed for as long as the page was small
+          # and started failing when it grew past ~47 KB.
+          curl -fsS http://127.0.0.1:8489/ -o /tmp/index.html
+          grep -q 'Hays USD 489 Closures' /tmp/index.html
           curl -fsS http://127.0.0.1:8489/api/calendar -o /tmp/cal.json
           python3 -c "
           import json
