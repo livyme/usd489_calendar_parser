@@ -931,9 +931,11 @@ function renderSource(){
   if(meta.pdfLastModified){
     const lm = new Date(meta.pdfLastModified);
     if(!isNaN(lm)){
-      // "Dated" rather than "updated": this is the file's Last-Modified, not
-      // an editorial revision date.
-      bits.push(`Official PDF calendar dated ${esc(lm.toLocaleDateString('en-US',
+      // Named for what the value actually is: the Last-Modified header on the
+      // district's PDF. That is when the file changed on their server, which
+      // is not necessarily when the calendar's contents were revised -- a
+      // re-upload moves it too -- so it does not claim to be a revision date.
+      bits.push(`Official PDF calendar last modified ${esc(lm.toLocaleDateString('en-US',
         {month: '2-digit', day: '2-digit', year: 'numeric'}))}`);
     }
   }
