@@ -164,6 +164,22 @@ def classify(title: str) -> str:
     return "holiday"
 
 
+# Tags that describe people being at school. A weekend day inside one of these
+# spans is a transcription artefact of the legend, not a real entry.
+WEEKDAY_ONLY_TAGS = {"conf", "inservice"}
+
+
+def _contiguous(days: list[dt.date]) -> list[list[dt.date]]:
+    """Split a sorted date list into runs of consecutive days."""
+    runs: list[list[dt.date]] = []
+    for day in days:
+        if runs and (day - runs[-1][-1]).days == 1:
+            runs[-1].append(day)
+        else:
+            runs.append([day])
+    return runs
+
+
 def clean_title(raw: str) -> tuple[str, bool]:
     """Split the explicit 'NO SCHOOL' prefix off the descriptive title."""
     text = " ".join(raw.split())
@@ -211,21 +227,37 @@ def parse_pdf(pdf_bytes: bytes) -> dict:
             d1 = max(1, min(d1, last_dom))
             d2 = max(d1, min(d2, last_dom))
 
+            tag = classify(title)
+            dates = [dt.date(year, current_month, day) for day in range(d1, d2 + 1)]
+
+            # The legend writes conferences and inservice days as one span --
+            # "26-29 NO SCHOOL P/T Conf" -- even where the span runs over a
+            # weekend the month grid leaves unmarked. Nobody holds conferences
+            # on a Saturday, so those days are dropped rather than published as
+            # conference days. Recesses and holidays keep their weekends: there
+            # the closure really is continuous, and splitting Winter Recess at
+            # every weekend would turn one break into several.
+            # Spans only. A legend line naming a single date is the district
+            # marking that day deliberately, even a Saturday one; only a span
+            # written across a weekend is the transcription shortcut.
+            if len(dates) > 1 and tag in WEEKDAY_ONLY_TAGS:
+                dates = [day for day in dates if day.weekday() < 5]
+
+            # Whatever survives may no longer be one span, so the range is
+            # rebuilt per contiguous stretch instead of echoing the legend's.
             group = []
-            for day in range(d1, d2 + 1):
-                ev = {
-                    "date": f"{year:04d}-{current_month:02d}-{day:02d}",
-                    "title": title,
-                    "tag": classify(title),
-                    "noSchool": no_school,
-                }
-                if d2 > d1:
-                    ev["range"] = (
-                        f"{year:04d}-{current_month:02d}-{d1:02d}"
-                        f"/{year:04d}-{current_month:02d}-{d2:02d}"
-                    )
-                events.append(ev)
-                group.append(ev)
+            for run in _contiguous(dates):
+                for day in run:
+                    ev = {
+                        "date": day.isoformat(),
+                        "title": title,
+                        "tag": tag,
+                        "noSchool": no_school,
+                    }
+                    if len(run) > 1:
+                        ev["range"] = f"{run[0].isoformat()}/{run[-1].isoformat()}"
+                    events.append(ev)
+                    group.append(ev)
             last_event = group[0] if group else None
             continue
 
