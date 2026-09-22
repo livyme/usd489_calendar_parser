@@ -45,6 +45,7 @@ import time
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from urllib.parse import parse_qs, urlsplit
 
 import calendar_source
 import ical_feed
@@ -218,6 +219,25 @@ class Handler(BaseHTTPRequestHandler):
     def _no_store(self) -> dict[str, str]:
         return {"Cache-Control": "no-store"}
 
+    def _wants_html(self) -> bool:
+        """True for a browser form post, false for a scripted JSON caller.
+
+        A form submission sends Accept: text/html,...; anything driving the
+        endpoint as an API asks for application/json explicitly. Defaulting to
+        JSON keeps curl and the old fetch contract unchanged.
+        """
+        accept = self.headers.get("Accept", "")
+        return "text/html" in accept and "application/json" not in accept
+
+    def _redirect(self, location: str) -> None:
+        """See-other, so a browser reload cannot re-submit a crawl."""
+        self._send(
+            HTTPStatus.SEE_OTHER,
+            b"",
+            "text/plain; charset=utf-8",
+            {"Location": location, **self._no_store()},
+        )
+
     # -- admin gate --------------------------------------------------------
     def _admin_identity(self) -> str | None:
         return self.headers.get(ACCESS_EMAIL_HEADER)
@@ -275,6 +295,8 @@ class Handler(BaseHTTPRequestHandler):
         # for hitting the district's website.
         if not self._admin_allowed():
             log("[warn] refused refresh: no Cloudflare Access identity on request")
+            if self._wants_html():
+                return self._redirect("/admin?failed=forbidden")
             return self._json(
                 HTTPStatus.FORBIDDEN,
                 {
@@ -290,6 +312,8 @@ class Handler(BaseHTTPRequestHandler):
             data = STORE.refresh()
         except Throttled as exc:
             log(f"[warn] refresh throttled ({exc.retry_after}s remaining)")
+            if self._wants_html():
+                return self._redirect(f"/admin?throttled={exc.retry_after}")
             return self._json(
                 HTTPStatus.TOO_MANY_REQUESTS,
                 {"error": str(exc), "retryAfter": exc.retry_after},
@@ -297,6 +321,8 @@ class Handler(BaseHTTPRequestHandler):
             )
         except calendar_source.CalendarError as exc:
             log(f"[error] refresh failed: {exc}")
+            if self._wants_html():
+                return self._redirect("/admin?failed=source")
             return self._json(
                 HTTPStatus.BAD_GATEWAY,
                 {"error": str(exc), "stillServing": (STORE.data or {}).get("meta")},
@@ -304,11 +330,15 @@ class Handler(BaseHTTPRequestHandler):
             )
         except Exception as exc:  # noqa: BLE001 - never kill the server on refresh
             log(f"[error] refresh crashed: {type(exc).__name__}: {exc}")
+            if self._wants_html():
+                return self._redirect("/admin?failed=error")
             return self._json(
                 HTTPStatus.INTERNAL_SERVER_ERROR,
                 {"error": f"{type(exc).__name__}: {exc}"},
                 self._no_store(),
             )
+        if self._wants_html():
+            return self._redirect("/admin?refreshed=1")
         self._json(HTTPStatus.OK, data, self._no_store())
 
     # -- handlers ----------------------------------------------------------
@@ -337,6 +367,34 @@ class Handler(BaseHTTPRequestHandler):
         payload["cacheSource"] = STORE.source
         self._json(HTTPStatus.OK, payload, self._no_store())
 
+    def _refresh_outcome(self) -> str:
+        """Render the banner for a POST that redirected back here.
+
+        Only fixed codes are accepted, and the retry count is re-parsed as an
+        int, so nothing from the query string is ever echoed into the page.
+        The reason a refresh failed goes to the container log, which is the
+        only place with enough detail to be worth reading.
+        """
+        query = parse_qs(urlsplit(self.path).query)
+        if query.get("refreshed"):
+            return ('<p class="banner ok">Refresh complete &mdash; the entry count '
+                    "and timestamp above are from that crawl.</p>")
+        raw = (query.get("throttled") or [""])[0]
+        if raw.isdigit():
+            return (f'<p class="banner no">Not refreshed: usd489.com was crawled '
+                    f"recently, so the throttle is holding for another "
+                    f"{int(raw)}s.</p>")
+        reason = {
+            "forbidden": ("Not refreshed: this request carried no Cloudflare Access "
+                          "identity, so crawling was refused."),
+            "source": ("The refresh failed while reading the district's site. The "
+                       "previously cached calendar is still being served &mdash; see "
+                       "the container log for the reason."),
+            "error": ("The refresh crashed. The previously cached calendar is still "
+                      "being served &mdash; see the container log for the traceback."),
+        }.get((query.get("failed") or [""])[0])
+        return f'<p class="banner no">{reason}</p>' if reason else ""
+
     def _serve_admin_page(self) -> None:
         """Human-readable landing page for /admin.
 
@@ -347,6 +405,7 @@ class Handler(BaseHTTPRequestHandler):
         email = self._admin_identity()
         allowed = self._admin_allowed()
         wait = STORE.retry_after()
+        outcome = self._refresh_outcome()
 
         if email:
             identity = f"Signed in as <strong>{html.escape(email)}</strong>."
@@ -362,6 +421,13 @@ class Handler(BaseHTTPRequestHandler):
                 "disabled. Protect <code>/admin</code> with an Access policy."
             )
 
+        disabled = "" if allowed else " disabled"
+        crawl_note = (
+            "Crawls usd489.com twice: the homepage, then the calendar PDF. "
+            "Nothing else is fetched, and only one refresh runs at a time."
+            if allowed else
+            "Refreshing is disabled for this request, so the button does nothing."
+        )
         state = "permitted" if allowed else "disabled"
         throttle = (
             f"Throttled for another {wait}s." if wait
@@ -369,6 +435,7 @@ class Handler(BaseHTTPRequestHandler):
         )
         meta = (STORE.data or {}).get("meta") or {}
         retrieved = html.escape(str(meta.get("retrievedAt", "unknown")))
+        count = len((STORE.data or {}).get("events") or [])
 
         body = f"""<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8">
@@ -392,9 +459,16 @@ class Handler(BaseHTTPRequestHandler):
   a{{color:#8c1d1d}}
   .ok{{color:#1f6b38;font-weight:600}}
   .no{{color:#8c1d1d;font-weight:600}}
+  .banner{{border-left:3px solid currentColor;padding:8px 12px;font-size:.9rem;
+    background:#f4f2f0;border-radius:0 6px 6px 0}}
+  .btn{{font:inherit;font-weight:600;cursor:pointer;color:#fff;background:#8c1d1d;
+    border:0;border-radius:8px;padding:9px 16px}}
+  .btn:disabled{{cursor:not-allowed;opacity:.45}}
+  form{{margin:18px 0 8px}}
   @media (prefers-color-scheme:dark){{
     body{{background:#131314;color:#f2f0ee}}
     code{{background:#242426}} a{{color:#f0a8a7}}
+    .banner{{background:#1f1f21}} .btn{{background:#a33232}}
     .muted,dt{{color:#8b847e}} .ok{{color:#8ed7a3}} .no{{color:#e8908f}}
   }}
 </style></head><body><main>
@@ -405,9 +479,13 @@ class Handler(BaseHTTPRequestHandler):
   <dt>Throttle</dt><dd>{throttle}</dd>
   <dt>Data source</dt><dd>{html.escape(STORE.source)}</dd>
   <dt>Retrieved</dt><dd>{retrieved}</dd>
+  <dt>Entries</dt><dd>{count}</dd>
 </dl>
-<p>Refreshing is done from the calendar page itself — the Refresh button
-   appears there once this page shows an identity.</p>
+{outcome}
+<form method="post" action="/admin/refresh">
+  <button class="btn" type="submit"{disabled}>Refresh now</button>
+</form>
+<p class="muted">{crawl_note}</p>
 <p><a href="/">&larr; Back to the calendar</a></p>
 </main></body></html>
 """
