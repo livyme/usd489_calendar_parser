@@ -1,5 +1,5 @@
 {
-  "schoolYear": "2026–2027",
+  "schoolYear": "2026\u20132027",
   "events": [
     {
       "date": "2026-08-17",
@@ -15,7 +15,7 @@
     },
     {
       "date": "2026-08-19",
-      "title": "First Day of School (Full Day HMS/HHS—1/2 Day Elementary)",
+      "title": "First Day of School (Full Day HMS/HHS\u20141/2 Day Elementary)",
       "tag": "milestone",
       "noSchool": false
     },
