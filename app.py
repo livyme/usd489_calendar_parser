@@ -442,6 +442,11 @@ class Handler(BaseHTTPRequestHandler):
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Admin — USD 489 Closures</title>
 <style>
+  /* Values mirror the design tokens in static/index.html -- deliberately
+     copied rather than shared, because that page is served as immutable
+     bytes and a /style.css route would cost a second request on every
+     visit to dedupe 30 lines. Keep any new colour here to one already in
+     that palette. */
   :root{{color-scheme:light dark}}
   body{{margin:0;padding:clamp(24px,5vw,48px);
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif;
@@ -461,14 +466,15 @@ class Handler(BaseHTTPRequestHandler):
   .no{{color:#8c1d1d;font-weight:600}}
   .banner{{border-left:3px solid currentColor;padding:8px 12px;font-size:.9rem;
     background:#f4f2f0;border-radius:0 6px 6px 0}}
-  .btn{{font:inherit;font-weight:600;cursor:pointer;color:#fff;background:#8c1d1d;
+  .btn{{font:inherit;font-weight:600;cursor:pointer;color:#ffffff;background:#8c1d1d;
     border:0;border-radius:8px;padding:9px 16px}}
-  .btn:disabled{{cursor:not-allowed;opacity:.45}}
+  .btn:disabled{{cursor:not-allowed;opacity:.55}}
   form{{margin:18px 0 8px}}
   @media (prefers-color-scheme:dark){{
     body{{background:#131314;color:#f2f0ee}}
     code{{background:#242426}} a{{color:#f0a8a7}}
-    .banner{{background:#1f1f21}} .btn{{background:#a33232}}
+    .banner{{background:#242426}}
+    .btn{{background:#e8908f;color:#1c1c1e}}
     .muted,dt{{color:#8b847e}} .ok{{color:#8ed7a3}} .no{{color:#e8908f}}
   }}
 </style></head><body><main>
