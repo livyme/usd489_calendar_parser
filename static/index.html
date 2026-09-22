@@ -425,6 +425,24 @@
   .row-meta{margin:2px 0 0;font-size:.78rem;color:var(--text-muted);}
   .row.is-marker .row-title{color:var(--text-muted);font-weight:400;font-style:italic;}
 
+  /* A run of days collapses to one row that opens on click. */
+  .row-run{cursor:pointer;}
+  .row-run:focus-visible{outline:2px solid var(--ring);outline-offset:-2px;}
+  .chev{
+    flex:0 0 auto;
+    align-self:center;
+    color:var(--text-muted);
+    font-size:1.1rem;
+    line-height:1;
+    transition:transform var(--speed);
+  }
+  .row-run[aria-expanded="true"] .chev{transform:rotate(90deg);}
+  /* Indented and quieter than the run they belong to, so the eye can still
+     find the run rows when several are open. */
+  .row.is-child{padding-left:30px;border-bottom-style:dotted;}
+  .row.is-child .row-date .d{font-size:.95rem;font-weight:500;}
+  .row.is-child .row-title{font-size:.88rem;color:var(--text-soft);}
+
   .pill{
     flex:0 0 auto;
     align-self:center;
@@ -768,7 +786,8 @@ const dayDiff = (a,b) => Math.round((b-a)/86400000);
 const parseDate = s => new Date(s+"T00:00:00");
 const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
-const state = { data:null, filter:'upcoming', query:'' };
+const state = { data:null, filter:'upcoming', query:'',
+                expanded:new Set(), expandedSeeded:false };
 
 const pillLabel = e => PILL[e.tag] || (e.noSchool ? 'No school' : 'Note');
 
@@ -811,17 +830,110 @@ function spanMap(){
   return spanCache.map;
 }
 
+const fmtRange = (a, b) => a.getMonth()===b.getMonth()
+  ? `${fmtMonShort(a)} ${a.getDate()}–${b.getDate()}`
+  : `${fmtMonShort(a)} ${a.getDate()} – ${fmtMonShort(b)} ${b.getDate()}`;
+
 function rangeLabel(e){
   const span = spanMap().get(e.title+'|'+e.date);
   if(!span) return '';
-  const [a,b] = [span.start, span.end];
-  if(dayDiff(a,b) === 0) return '';
-  return a.getMonth()===b.getMonth()
-    ? `${fmtMonShort(a)} ${a.getDate()}–${b.getDate()}`
-    : `${fmtMonShort(a)} ${a.getDate()} – ${fmtMonShort(b)} ${b.getDate()}`;
+  if(dayDiff(span.start, span.end) === 0) return '';
+  return fmtRange(span.start, span.end);
 }
 
 /* ---- list ------------------------------------------------------------- */
+/* Consecutive days sharing a title, grouped so a fifteen-day recess is one
+   row. Grouped by title first, because the district lists Jan 4 as both Winter
+   Recess and Teacher Inservice: walking the date-sorted list directly would
+   let that Inservice split the recess in two. Built from the *filtered* items,
+   so a run reflects what is actually on screen -- during a recess, the
+   upcoming view shows the days that are left, not the ones already gone. */
+function runsOf(items){
+  const byTitle = new Map();
+  for(const e of items){
+    if(!byTitle.has(e.title)) byTitle.set(e.title, []);
+    byTitle.get(e.title).push(e);
+  }
+  const runs = [];
+  for(const [title, list] of byTitle){
+    list.sort((a, b) => a.d - b.d);
+    let cur = null;
+    for(const e of list){
+      if(cur && dayDiff(cur.items[cur.items.length - 1].d, e.d) === 1){
+        cur.items.push(e);
+        continue;
+      }
+      cur = {title, items: [e]};
+      runs.push(cur);
+    }
+  }
+  runs.sort((a, b) => a.items[0].d - b.items[0].d);
+  return runs;
+}
+
+const runKey = run => run.title + '|' + run.items[0].date;
+
+function dayRow(e, isChild){
+  const isToday = sameDay(e.d, today);
+  const li = document.createElement('li');
+  li.className = 'row'
+    + (isChild ? ' is-child' : '')
+    + (e.marker ? ' is-marker' : '')
+    + (!e.marker && e.d < today ? ' is-past' : '')
+    + (isToday ? ' is-today' : '');
+
+  // A child already sits under the run that states the span, so repeating it
+  // on every day would be noise.
+  const span = (e.marker || isChild) ? '' : rangeLabel(e);
+  const meta = [];
+  if(span) meta.push('Part of ' + span);
+  if(!e.marker && e.noSchool && e.tag !== 'holiday') meta.push('No school');
+
+  li.innerHTML = `
+    <time class="row-date" datetime="${esc(e.date)}">
+      <span class="d">${e.d.getDate()}</span>
+      <span class="wd">${fmtWeekday(e.d)}</span>
+    </time>
+    <div class="row-main">
+      <p class="row-title">${esc(e.title)}</p>
+      ${meta.length ? `<p class="row-meta">${esc(meta.join(' \u00b7 '))}</p>` : ''}
+    </div>
+    ${e.marker
+      ? '<span class="pill pill-today">Today</span>'
+      : `<span class="pill pill-${esc(e.tag)}">${esc(pillLabel(e))}</span>`}`;
+  return li;
+}
+
+function runRow(run, expanded){
+  const first = run.items[0];
+  const last = run.items[run.items.length - 1];
+  const holdsToday = run.items.some(e => sameDay(e.d, today));
+  const li = document.createElement('li');
+  li.className = 'row row-run'
+    + (last.d < today ? ' is-past' : '')
+    + (holdsToday ? ' is-today' : '');
+  li.setAttribute('role', 'button');
+  li.tabIndex = 0;
+  li.setAttribute('aria-expanded', String(expanded));
+
+  const n = run.items.length;
+  const meta = [fmtRange(first.d, last.d), `${n} days`];
+  if(first.noSchool && first.tag !== 'holiday') meta.push('No school');
+
+  li.innerHTML = `
+    <time class="row-date" datetime="${esc(first.date)}">
+      <span class="d">${first.d.getDate()}</span>
+      <span class="wd">${fmtWeekday(first.d)}</span>
+    </time>
+    <div class="row-main">
+      <p class="row-title">${esc(run.title)}</p>
+      <p class="row-meta">${esc(meta.join(' \u00b7 '))}</p>
+    </div>
+    <span class="pill pill-${esc(first.tag)}">${esc(pillLabel(first))}</span>
+    <span class="chev" aria-hidden="true">&#8250;</span>`;
+  return li;
+}
+
 function renderList(){
   const host = document.getElementById('list');
   const events = state.data ? state.data.events : [];
@@ -836,7 +948,7 @@ function renderList(){
 
   if(!items.some(e=>sameDay(e.d,today)) && (!q || 'today no closure'.includes(q))){
     items.push({date:today.toISOString().slice(0,10), d:new Date(today),
-                title:'Today — no closure', marker:true});
+                title:'Today \u2014 no closure', marker:true});
   }
   items.sort((a,b)=>a.d-b.d);
 
@@ -845,13 +957,27 @@ function renderList(){
     return;
   }
 
+  const runs = runsOf(items);
+
+  // A run containing today starts open, once, so the Today highlight is not
+  // hidden inside a collapsed row. After that the reader's own toggling wins.
+  if(!state.expandedSeeded){
+    for(const run of runs){
+      if(run.items.length > 1 && run.items.some(e => sameDay(e.d, today))){
+        state.expanded.add(runKey(run));
+      }
+    }
+    state.expandedSeeded = true;
+  }
+
   let monthKey = '', ul = null;
-  for(const e of items){
-    const key = e.d.getFullYear()+'-'+e.d.getMonth();
+  for(const run of runs){
+    const at = run.items[0].d;
+    const key = at.getFullYear()+'-'+at.getMonth();
     if(key !== monthKey){
       const h = document.createElement('div');
       h.className = 'month';
-      h.textContent = fmtMonthYear(e.d);
+      h.textContent = fmtMonthYear(at);
       host.appendChild(h);
       ul = document.createElement('ul');
       ul.className = 'rows';
@@ -859,31 +985,35 @@ function renderList(){
       monthKey = key;
     }
 
-    const isToday = sameDay(e.d, today);
-    const li = document.createElement('li');
-    li.className = 'row'
-      + (e.marker ? ' is-marker' : '')
-      + (!e.marker && e.d < today ? ' is-past' : '')
-      + (isToday ? ' is-today' : '');
+    if(run.items.length === 1){
+      ul.appendChild(dayRow(run.items[0], false));
+      continue;
+    }
 
-    const span = e.marker ? '' : rangeLabel(e);
-    const meta = [];
-    if(span) meta.push('Part of '+span);
-    if(!e.marker && e.noSchool && e.tag !== 'holiday') meta.push('No school');
+    // A run that crosses a month boundary stays whole, under the month it
+    // starts in: splitting it would undo the grouping this is here to do.
+    const k = runKey(run);
+    const open = state.expanded.has(k);
+    const summary = runRow(run, open);
+    ul.appendChild(summary);
 
-    li.innerHTML = `
-      <time class="row-date" datetime="${esc(e.date)}">
-        <span class="d">${e.d.getDate()}</span>
-        <span class="wd">${fmtWeekday(e.d)}</span>
-      </time>
-      <div class="row-main">
-        <p class="row-title">${esc(e.title)}</p>
-        ${meta.length ? `<p class="row-meta">${esc(meta.join(' · '))}</p>` : ''}
-      </div>
-      ${e.marker
-        ? '<span class="pill pill-today">Today</span>'
-        : `<span class="pill pill-${esc(e.tag)}">${esc(pillLabel(e))}</span>`}`;
-    ul.appendChild(li);
+    const children = run.items.map(e => {
+      const li = dayRow(e, true);
+      li.hidden = !open;
+      ul.appendChild(li);
+      return li;
+    });
+
+    const toggle = () => {
+      const now = !(summary.getAttribute('aria-expanded') === 'true');
+      summary.setAttribute('aria-expanded', String(now));
+      children.forEach(li => { li.hidden = !now; });
+      if(now) state.expanded.add(k); else state.expanded.delete(k);
+    };
+    summary.addEventListener('click', toggle);
+    summary.addEventListener('keydown', ev => {
+      if(ev.key === 'Enter' || ev.key === ' '){ ev.preventDefault(); toggle(); }
+    });
   }
 }
 
