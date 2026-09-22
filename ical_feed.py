@@ -129,11 +129,21 @@ def _dtstamp(meta: dict) -> str:
 def render_ics(data: dict, *, calendar_name: str | None = None) -> bytes:
     """Build the iCalendar document for a parsed calendar payload."""
     meta = data.get("meta") or {}
-    school_year = data.get("schoolYear", "")
-    name = calendar_name or f"Hays USD 489 Closures {school_year}".strip()
+    # Deliberately year-agnostic. A subscription's display name is captured by
+    # the client when it subscribes and is not renamed on later fetches, so a
+    # year in here would be frozen at whatever it said that day -- still
+    # reading "2026-2027" long after the feed had moved on. The school year
+    # lives in X-WR-CALDESC instead, which clients re-read.
+    name = calendar_name or "Hays USD 489 District Calendar"
     stamp = _dtstamp(meta)
 
-    desc_bits = ["No-school days and milestones from the USD 489 district calendar."]
+    desc_bits = [
+        "Unofficial feed of no-school days and milestones from the USD 489 "
+        "district calendar."
+    ]
+    school_year = data.get("schoolYear", "")
+    if school_year:
+        desc_bits.append(f"School year {school_year}.")
     if meta.get("pdfUrl"):
         desc_bits.append(f"Source PDF: {meta['pdfUrl']}")
     for note in data.get("notes", []):
