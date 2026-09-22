@@ -71,19 +71,17 @@ relabelled or moved out of `k-cloudflare`, the site goes dark rather than
 warning. After the first sync,
 confirm the pod is still ready and the site still loads through the tunnel.
 
-Two things to check on your cluster, because both fail quietly:
+Two quiet failure modes worth knowing about:
 
-- **The CNI must enforce NetworkPolicy.** Flannel alone ignores these objects
-  entirely, so the manifest applies cleanly, reports no error, and protects
-  nothing. Calico and Cilium enforce it. This matters here: Talos ships Flannel
-  by default, so unless this cluster had a policy-capable CNI installed
-  deliberately, treat the manifest as documentation of intent and not as a
-  control. `kubectl get pods -n kube-system` settles it.
+- **The CNI has to enforce NetworkPolicy.** This cluster runs Cilium, which
+  does. It matters if that ever changes: Flannel, which Talos ships by default,
+  ignores these objects entirely — the manifest would apply cleanly, report no
+  error, and protect nothing.
 - **Liveness and readiness probes come from the kubelet, not a pod**, so no
   `podSelector` can match them. Most CNIs permit node-to-pod traffic regardless;
   if yours does not, the probes start failing and the pod restart-loops. The fix
-  is an extra `from: [ipBlock: {cidr: <node CIDR>}]` rule, which is why step 3
-  is checking readiness rather than assuming it.
+  is an extra `from: [ipBlock: {cidr: <node CIDR>}]` rule — which is why it is
+  worth watching readiness after the first sync rather than assuming it.
 
 **Cloudflare Access supplies the identity.** In Cloudflare Zero Trust go to
 Access controls → Applications → Create new application → Self-hosted, and add
