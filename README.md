@@ -328,8 +328,26 @@ k8s/                   Deployment, ClusterIP Service and a NetworkPolicy
 .github/workflows/     on a v* tag: smoke-test, publish to ghcr.io, pin the tag in k8s/
 ```
 
-## Known quirk in the source PDF
+## Known quirks in the source PDF
 
-The 2026–2027 calendar lists Jan 4 twice — once inside `1-4-NO SCHOOL Winter Recess` and
-again as `4-NO SCHOOL Teacher Inservice`. Both are kept, because that's what the district
+**Jan 4 is listed twice** — once inside `1-4-NO SCHOOL Winter Recess` and again as
+`4-NO SCHOOL Teacher Inservice`. Both are kept, because that's what the district
 published; it isn't a parsing artifact.
+
+**Conference spans are written over weekends.** The legend gives March's conferences as
+`26-29-NO SCHOOL P/T Conf`, but 27 and 28 March are a Saturday and a Sunday, and the month
+grid in the same PDF doesn't mark them. The span is shorthand for "Friday and Monday", not
+a claim that conferences run all weekend. Published literally it produced a four-day
+conference on the page and a four-day event straddling the weekend in subscribers'
+calendars.
+
+So weekend days are dropped from spans tagged `conf` or `inservice` — the tags that
+describe people being at school — and what survives is re-split into contiguous stretches
+with its range rebuilt. This is the one place the parser knowingly departs from the
+legend. Two constraints keep that narrow:
+
+- **Recesses and holidays keep their weekends.** Those closures really are continuous, and
+  stripping weekends would split Winter Recess into three events at exactly the points a
+  family is most likely to be away.
+- **Single dates are never dropped.** A legend line naming one date is the district marking
+  that day deliberately, even a Saturday one. Only spans get corrected.
