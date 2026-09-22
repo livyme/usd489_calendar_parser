@@ -247,6 +247,14 @@
   }
   .btn:hover:not(:disabled){background:var(--surface-sunken);text-decoration:none;}
   .btn:active:not(:disabled){transform:translateY(1px);}
+  /* The stroke styling lives on .segmented-icon svg for the theme toggle; a
+     button icon needs its own copy, and flex:none so the row cannot squash it
+     to nothing -- which is exactly what an unsized inline svg does here. */
+  .btn svg{
+    width:15px; height:15px; flex:none;
+    fill:none; stroke:currentColor; stroke-width:1.9;
+    stroke-linecap:round; stroke-linejoin:round;
+  }
   .btn:disabled{opacity:.55;cursor:progress;}
   .btn-primary{
     background:var(--accent);
@@ -650,7 +658,7 @@
     <span id="sourceInfo"></span>
     <span class="actions">
       <a class="btn btn-primary" id="icsBtn" href="/calendar.ics">
-        <span class="ico" aria-hidden="true">&#9993;</span>Add to your calendar
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>Subscribe in Calendar
       </a>
     </span>
   </div>
