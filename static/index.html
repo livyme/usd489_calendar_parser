@@ -432,8 +432,19 @@
   .row.is-marker .row-title{color:var(--text-muted);font-weight:400;font-style:italic;}
 
   /* A run of days collapses to one row that opens on click. */
-  .row-run{cursor:pointer;}
-  .row-run:focus-visible{outline:2px solid var(--ring);outline-offset:-2px;}
+  .row-run{position:relative;cursor:pointer;}
+  /* Covers the whole row, so a click anywhere on it toggles. */
+  .row-hit{
+    position:absolute;
+    inset:0;
+    margin:0;
+    padding:0;
+    border:0;
+    background:transparent;
+    border-radius:inherit;
+    cursor:pointer;
+  }
+  .row-hit:focus-visible{outline:2px solid var(--ring);outline-offset:-2px;border-radius:var(--radius-sm);}
   /* Sits inside the title line, next to the count, so the type pill stays the
      last child of the row and keeps its column with every ungrouped row. */
   .row-more{
@@ -448,7 +459,7 @@
     vertical-align:1px;
   }
   .chev{display:inline-block;font-size:.95rem;line-height:1;transition:transform var(--speed);}
-  .row-run[aria-expanded="true"] .chev{transform:rotate(90deg);}
+  .row-run.is-open .chev{transform:rotate(90deg);}
   .row-run:hover .row-more-text{text-decoration:underline;text-underline-offset:2px;}
   /* Sits against the title so the row reads as a group at a glance. */
   .run-count{
@@ -966,15 +977,17 @@ function runRow(run, expanded){
   const li = document.createElement('li');
   li.className = 'row row-run'
     + (last.d < today ? ' is-past' : '')
-    + (holdsToday ? ' is-today' : '');
-  li.setAttribute('role', 'button');
-  li.tabIndex = 0;
-  li.setAttribute('aria-expanded', String(expanded));
+    + (holdsToday ? ' is-today' : '')
+    + (expanded ? ' is-open' : '');
 
   const n = run.items.length;
   const meta = [runDates(first.d, last.d, n)];
   if(first.noSchool && first.tag !== 'holiday') meta.push('No school');
 
+  // The row stays a plain list item; a real button laid over it does the
+  // toggling, so the list keeps its semantics and the keyboard gets native
+  // Enter/Space. The visible Expand/Collapse is hidden from screen readers,
+  // which hear the button's aria-expanded state instead.
   li.innerHTML = `
     <time class="row-date" datetime="${esc(first.date)}">
       <span class="d">${first.d.getDate()}</span>
@@ -982,11 +995,13 @@ function runRow(run, expanded){
     </time>
     <div class="row-main">
       <p class="row-title">${esc(run.title)}<span class="run-count">${n} days</span><span
-        class="row-more"><span class="chev" aria-hidden="true">&#8250;</span><span
+        class="row-more" aria-hidden="true"><span class="chev">&#8250;</span><span
         class="row-more-text">${expanded ? 'Collapse' : 'Expand'}</span></span></p>
       <p class="row-meta">${esc(meta.join(' \u00b7 '))}</p>
     </div>
-    <span class="pill pill-${esc(first.tag)}">${esc(pillLabel(first))}</span>`;
+    <span class="pill pill-${esc(first.tag)}">${esc(pillLabel(first))}</span>
+    <button type="button" class="row-hit" aria-expanded="${expanded}"><span
+      class="visually-hidden">${esc(run.title)}: ${n} days</span></button>`;
   return li;
 }
 
@@ -1061,16 +1076,14 @@ function renderList(){
     });
 
     const label = summary.querySelector('.row-more-text');
-    const toggle = () => {
-      const now = !(summary.getAttribute('aria-expanded') === 'true');
-      summary.setAttribute('aria-expanded', String(now));
+    const button = summary.querySelector('.row-hit');
+    button.addEventListener('click', () => {
+      const now = button.getAttribute('aria-expanded') !== 'true';
+      button.setAttribute('aria-expanded', String(now));
+      summary.classList.toggle('is-open', now);
       label.textContent = now ? 'Collapse' : 'Expand';
       children.forEach(li => { li.hidden = !now; });
       if(now) state.expanded.add(k); else state.expanded.delete(k);
-    };
-    summary.addEventListener('click', toggle);
-    summary.addEventListener('keydown', ev => {
-      if(ev.key === 'Enter' || ev.key === ' '){ ev.preventDefault(); toggle(); }
     });
   }
 }
