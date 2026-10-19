@@ -262,11 +262,10 @@
   }
   .btn:hover:not(:disabled){background:var(--surface-sunken);text-decoration:none;}
   .btn:active:not(:disabled){transform:translateY(1px);}
-  /* The stroke styling lives on .segmented-icon svg for the theme toggle; a
-     button icon needs its own copy, and flex:none so the row cannot squash it
-     to nothing -- which is exactly what an unsized inline svg does here. */
-  .btn svg{
-    width:15px; height:15px; flex:none;
+  /* Shared by the Subscribe button and the theme toggle. flex:none so a flex
+     row cannot squash an unsized inline svg to nothing. */
+  .btn svg, .segmented-icon svg{
+    width:15px; height:15px; flex:none; display:block;
     fill:none; stroke:currentColor; stroke-width:1.9;
     stroke-linecap:round; stroke-linejoin:round;
   }
@@ -360,16 +359,6 @@
     display:inline-flex;
     align-items:center;
     justify-content:center;
-  }
-  .segmented-icon svg{
-    width:15px;
-    height:15px;
-    display:block;
-    fill:none;
-    stroke:currentColor;
-    stroke-width:1.9;
-    stroke-linecap:round;
-    stroke-linejoin:round;
   }
 
   /* ---- list ------------------------------------------------------------ */
