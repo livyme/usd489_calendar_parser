@@ -161,10 +161,10 @@ class CalendarStore:
     def refresh(self) -> dict:
         """Re-crawl and persist. Raises CalendarError, leaving old data intact."""
         # One refresh at a time; concurrent clicks shouldn't stampede the site.
+        # The site did not fail, so this is a 429 like any other throttle, not
+        # a CalendarError that reports the crawl as broken.
         if not self._refresh_lock.acquire(blocking=False):
-            raise calendar_source.CalendarError(
-                "A refresh is already running -- try again in a moment."
-            )
+            raise Throttled(max(1, self.retry_after()))
         try:
             wait = self.retry_after()
             if wait:
