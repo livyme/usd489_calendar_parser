@@ -217,6 +217,12 @@
     text-wrap:balance;
   }
   .next-when{margin:4px 0 0;font-size:.88rem;color:var(--text-soft);}
+  /* A button that reads as a link, for in-text actions. */
+  .link-btn{
+    padding:0;font:inherit;color:var(--accent-text);background:none;border:0;cursor:pointer;
+    text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:2px;
+  }
+  .link-btn:hover{text-decoration-thickness:2px;}
 
   /* ---- source and subscribe ------------------------------------------ */
   /* Where the dates come from: after the list, where it answers "can I trust
@@ -1159,10 +1165,16 @@ function renderNext(){
     .sort((a,b)=>a.d-b.d);
 
   if(!upcoming.length){
+    // Upcoming is empty by now too, so point at the view that still has dates.
     box.innerHTML = `<div>
         <p class="next-label">No closures left</p>
         <p class="next-title">Enjoy the rest of the year</p>
+        <p class="next-when"><button type="button" class="link-btn" id="showAll">See this year\u2019s closures</button></p>
       </div>`;
+    document.getElementById('showAll').addEventListener('click', () => {
+      document.querySelector('#filterToggle [data-filter="all"]').click();
+      document.getElementById('list').scrollIntoView({block:'start'});
+    });
     return;
   }
 
