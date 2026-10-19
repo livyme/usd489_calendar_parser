@@ -305,7 +305,14 @@
   .gm-grid > .pad{background:transparent;}
   .gm-grid > .we{background:var(--surface-sunken);}
   /* Days with an entry are buttons that jump to it in the list. */
-  .gm-grid > button{width:100%;padding:0;border:0;margin:0;cursor:pointer;font:inherit;}
+  .gm-grid > button{position:relative;width:100%;padding:0;border:0;margin:0;cursor:pointer;font:inherit;}
+  /* On a touch screen the hit area reaches 2px past the drawn square, over
+     the gaps and into plain neighbouring days: ~13px instead of 9. Still
+     short of WCAG's 24px, which month grids can't reach on a phone; the list
+     offers every one of these dates as a full-size row. */
+  @media (pointer:coarse){
+    .gm-grid > button::after{content:"";position:absolute;inset:-2px;}
+  }
   .gm-grid > button:hover{transform:scale(1.35);position:relative;z-index:1;}
   .gm-grid > button:focus-visible{outline:2px solid var(--ring);outline-offset:1px;border-radius:2px;}
   .gm-grid > .t-holiday{background:var(--holiday-fg);}
