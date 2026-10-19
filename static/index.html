@@ -383,7 +383,17 @@
   }
   .row:last-child{border-bottom:0;}
   .row:hover{background:var(--surface-sunken);}
-  .row.is-past{opacity:.45;}
+  /* Receded by colour rather than opacity: at .45 opacity a past title fell
+     to 2.86:1 and its meta line to 1.66:1. --text-muted holds 4.5:1 on every
+     surface a row can sit on, hovered or not. */
+  .row.is-past .row-date,
+  .row.is-past .row-date .wd,
+  .row.is-past .row-title{color:var(--text-muted);}
+  .row.is-past .pill{
+    background:transparent;
+    color:var(--text-muted);
+    border:1px solid var(--border-strong);
+  }
   .row.is-today{
     background:var(--accent-soft);
     border-bottom-color:transparent;
