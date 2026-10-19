@@ -564,6 +564,7 @@
     padding:44px 16px;
     font-size:.9rem;
   }
+  .empty p{margin:0 0 14px;}
   .banner{
     display:flex;
     gap:10px;
@@ -1074,7 +1075,17 @@ function renderList(){
   items.sort((a,b)=>a.d-b.d);
 
   if(!items.length){
-    host.innerHTML = '<p class="empty">Nothing matches that search.</p>';
+    // Only a search can empty the list (with none, the Today marker is always
+    // there), so offer the way back rather than leaving a dead end.
+    host.innerHTML = `<div class="empty"><p>Nothing matches \u201c${esc(state.query.trim())}\u201d.</p>
+      <button type="button" class="btn" id="clearSearch">Clear search</button></div>`;
+    document.getElementById('clearSearch').addEventListener('click', () => {
+      const box = document.getElementById('search');
+      box.value = '';
+      state.query = '';
+      renderList();
+      box.focus();
+    });
     return;
   }
 
