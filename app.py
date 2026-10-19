@@ -464,10 +464,10 @@ class Handler(BaseHTTPRequestHandler):
   main{{max-width:34rem;margin:0 auto}}
   h1{{font-size:1.25rem;margin:0 0 4px;letter-spacing:-.02em}}
   p{{margin:0 0 12px}}
-  .muted{{color:#8a827c;font-size:.85rem}}
+  .muted{{color:#6f6862;font-size:.85rem}}
   dl{{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;
     margin:18px 0;font-size:.9rem}}
-  dt{{color:#8a827c}}
+  dt{{color:#6f6862}}
   dd{{margin:0}}
   code{{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.85em;
     background:#f4f2f0;border-radius:4px;padding:1px 5px}}
@@ -485,7 +485,7 @@ class Handler(BaseHTTPRequestHandler):
     code{{background:#242426}} a{{color:#f0a8a7}}
     .banner{{background:#242426}}
     .btn{{background:#e8908f;color:#1c1c1e}}
-    .muted,dt{{color:#8b847e}} .ok{{color:#8ed7a3}} .no{{color:#e8908f}}
+    .muted,dt{{color:#9a938d}} .ok{{color:#8ed7a3}} .no{{color:#e8908f}}
   }}
 </style></head><body><main>
 <h1>USD 489 Closures — admin</h1>
