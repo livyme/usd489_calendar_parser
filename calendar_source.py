@@ -58,9 +58,13 @@ class CalendarError(RuntimeError):
 # --------------------------------------------------------------------------
 # crawling
 # --------------------------------------------------------------------------
-def fetch_text(url: str, *, timeout: int = HTTP_TIMEOUT) -> str:
+def _open(url: str, timeout: int):
     req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
-    with urllib.request.urlopen(req, timeout=timeout) as resp:
+    return urllib.request.urlopen(req, timeout=timeout)
+
+
+def fetch_text(url: str, *, timeout: int = HTTP_TIMEOUT) -> str:
+    with _open(url, timeout) as resp:
         return resp.read().decode("utf-8", errors="replace")
 
 
@@ -111,8 +115,7 @@ def discover_calendar_link(page_html: str) -> tuple[str, str]:
 
 def download_pdf(url: str) -> tuple[bytes, str, str | None]:
     """Follow the shortlink to the PDF. Returns (bytes, final_url, last_modified)."""
-    req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
-    with urllib.request.urlopen(req, timeout=60) as resp:
+    with _open(url, timeout=60) as resp:
         body = resp.read()
         final_url = resp.geturl()
         ctype = resp.headers.get("Content-Type", "")
@@ -180,10 +183,14 @@ def _contiguous(days: list[dt.date]) -> list[list[dt.date]]:
     return runs
 
 
+def _dashes(text: str) -> str:
+    """The PDF types an em dash as '---' and an en dash as '--'."""
+    return text.replace("---", "\u2014").replace("--", "\u2013")
+
+
 def clean_title(raw: str) -> tuple[str, bool]:
     """Split the explicit 'NO SCHOOL' prefix off the descriptive title."""
-    text = " ".join(raw.split())
-    text = text.replace("---", "\u2014").replace("--", "\u2013")
+    text = _dashes(" ".join(raw.split()))
     m = re.match(r"^NO\s+SCHOOL\b[\s:\u2013\u2014-]*(.*)$", text, re.I)
     if m:
         return (m.group(1).strip() or "No School"), True
@@ -263,7 +270,7 @@ def parse_pdf(pdf_bytes: bytes) -> dict:
 
         # "(Full Day HMS/HHS---1/2 Day Elementary)" continues the line above it.
         if text.startswith("(") and last_event is not None:
-            extra = text.replace("---", "\u2014").replace("--", "\u2013")
+            extra = _dashes(text)
             for ev in events:
                 if ev["date"] == last_event["date"] and ev["title"] == last_event["title"]:
                     ev["title"] = f"{ev['title']} {extra}"
