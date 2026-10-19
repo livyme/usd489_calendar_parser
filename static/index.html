@@ -154,9 +154,9 @@
   }
   h1{
     margin:0;
-    font-size:clamp(1.3rem,3.6vw,1.6rem);
-    font-weight:650;
-    letter-spacing:-0.02em;
+    font-size:clamp(1.45rem,4vw,1.9rem);
+    font-weight:720;
+    letter-spacing:-0.03em;
   }
   .masthead .year{
     color:var(--text-muted);
@@ -170,57 +170,35 @@
     /* Same tint as the highlighted "today" row, so the two accented things on
        the page read as one family. */
     background:var(--accent-soft);
-    border:1px solid var(--border);
-    border-radius:var(--radius);
-    box-shadow:var(--shadow);
-    padding:18px 20px;
-    padding-left:24px;
-    margin-bottom:12px;
+    border-radius:20px;
+    padding:22px 24px 24px;
+    margin-bottom:14px;
     display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap:16px;
-    min-height:86px;
-    overflow:hidden;
+    flex-direction:column;
+    gap:14px;
   }
-  .next::before{
-    content:"";
-    position:absolute;
-    inset:0 auto 0 0;
-    width:3px;
-    background:var(--accent);
-  }
-  .next-label{
-    font-size:.7rem;
-    font-weight:600;
-    letter-spacing:.09em;
-    text-transform:uppercase;
-    color:var(--text-muted);
-  }
-  .next-title{
-    font-size:clamp(1.05rem,2.6vw,1.2rem);
-    font-weight:600;
-    letter-spacing:-0.01em;
-    margin-top:3px;
-  }
-  .next-when{font-size:.8rem;color:var(--text-soft);margin-top:3px;}
-  .next-count{text-align:right;flex:0 0 auto;}
+  .next-label{margin:0;font-size:.82rem;font-weight:600;color:var(--accent-text);}
+  /* The count is the answer the page exists to give, so it is the largest
+     thing on it. */
+  .next-count{display:flex;align-items:baseline;gap:10px;}
   .next-count .n{
-    display:block;
-    font-size:clamp(1.7rem,5vw,2.1rem);
-    font-weight:680;
-    line-height:1;
-    letter-spacing:-0.03em;
+    font-size:clamp(3.4rem,12vw,4.75rem);
+    font-weight:760;
+    line-height:.9;
+    letter-spacing:-0.055em;
     color:var(--accent-text);
     font-variant-numeric:tabular-nums;
   }
-  .next-count .u{
-    display:block;
-    font-size:.7rem;
-    color:var(--text-muted);
-    margin-top:4px;
-    letter-spacing:.02em;
+  .next-count .u{font-size:1rem;font-weight:500;color:var(--text-soft);}
+  .next-title{
+    margin:0;
+    font-size:clamp(1.3rem,3.6vw,1.55rem);
+    font-weight:700;
+    line-height:1.2;
+    letter-spacing:-0.02em;
+    text-wrap:balance;
   }
+  .next-when{margin:4px 0 0;font-size:.88rem;color:var(--text-soft);}
 
   /* ---- provenance bar -------------------------------------------------- */
   .provenance{
@@ -726,7 +704,6 @@
   }
 
   @media (max-width: 30rem){
-    .next{align-items:flex-start;}
     .pill{align-self:flex-start;}
     .row{gap:11px;}
     .row-date{flex-basis:2.5rem;}
@@ -1142,14 +1119,14 @@ function renderNext(){
   const span = rangeLabel(next);
 
   box.innerHTML = `
-    <div>
-      <p class="next-label">Next closure</p>
-      <p class="next-title">${esc(next.title)}</p>
-      <p class="next-when">${esc(fmtLongDate(next.d))}${span ? ' · '+esc(span) : ''}</p>
-    </div>
+    <p class="next-label">Next day off</p>
     <div class="next-count">
       <span class="n">${n===0 ? 'Today' : n}</span>
       <span class="u">${n===0 ? '' : (n===1 ? 'day away' : 'days away')}</span>
+    </div>
+    <div>
+      <p class="next-title">${esc(next.title)}</p>
+      <p class="next-when">${esc(fmtLongDate(next.d))}${span ? ' · '+esc(span) : ''}</p>
     </div>`;
 }
 
