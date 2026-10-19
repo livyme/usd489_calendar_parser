@@ -340,9 +340,12 @@
     transition:border-color var(--speed), box-shadow var(--speed);
   }
   .search input::placeholder{color:var(--text-muted);}
-  /* The global :focus-visible outline does the work. The old replacement, an
-     --accent-soft halo, was 1.14:1 against the surface: invisible. */
-  .search input:focus{border-color:var(--accent);}
+  /* The global :focus-visible outline does the work, drawn over the border
+     rather than 2px outside it -- outside, the recoloured border and the
+     outline read as two concentric rings. (The older replacement, an
+     --accent-soft halo, was 1.14:1 against the surface: invisible.) */
+  .search input:focus{border-color:var(--ring);}
+  .search input:focus-visible{outline-offset:-1px;}
 
   .segmented{
     display:inline-flex;
