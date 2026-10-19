@@ -200,38 +200,15 @@
   }
   .next-when{margin:4px 0 0;font-size:.88rem;color:var(--text-soft);}
 
-  /* ---- provenance bar -------------------------------------------------- */
-  .provenance{
-    display:flex;
-    flex-wrap:wrap;
-    align-items:center;
-    justify-content:space-between;
-    gap:10px 16px;
-    font-size:.78rem;
-    color:var(--text-muted);
-    padding:2px 4px 0;
-    margin-bottom:clamp(18px,3vw,24px);
-  }
-  .provenance .prov-line{display:block;}
-  .provenance .prov-line + .prov-line{margin-top:2px;}
-  /* The first provenance line is far the longest, so give it the whole row and
-     tuck the button in beside the shorter ones rather than pushing it onto a
-     row of its own. display:contents lifts the generated .prov-line spans out
-     of #sourceInfo so they can be grid items themselves.
-     Narrow screens keep the flex stacking above. */
-  @media (min-width:700px){
-    .provenance{
-      display:grid; grid-template-columns:1fr auto;
-      column-gap:16px; row-gap:2px; align-items:center;
-    }
-    .provenance #sourceInfo{display:contents;}
-    .provenance .prov-line{grid-column:1; margin-top:0;}
-    .provenance .prov-line:first-child{grid-column:1 / -1;}
-    .provenance .actions{grid-column:2; grid-row:2 / span 2;}
-  }
-  .provenance a.src{font-weight:600;}
-  .provenance strong{color:var(--text-soft);font-weight:600;}
-  .actions{display:flex;gap:8px;align-items:center;}
+  /* ---- source and subscribe ------------------------------------------ */
+  /* Where the dates come from: after the list, where it answers "can I trust
+     this" for someone who has read the dates, rather than standing between a
+     first-time visitor and them. */
+  .source{margin:28px 0 0;font-size:.8rem;color:var(--text-muted);display:grid;gap:3px;}
+  .source .prov-line{display:block;}
+  .source strong{color:var(--text-soft);font-weight:600;}
+  .actions{display:flex;margin-bottom:22px;}
+  .actions .btn{flex:1;justify-content:center;padding:11px 16px;font-size:.9rem;font-weight:600;}
 
   .btn{
     display:inline-flex;
@@ -292,15 +269,15 @@
   .search{position:relative;flex:1 1 200px;min-width:0;}
   .search .ico{
     position:absolute;
-    left:12px; top:50%;
+    left:13px; top:50%;
+    width:16px; height:16px;
     transform:translateY(-50%);
-    color:var(--text-muted);
-    font-size:.85rem;
+    fill:none; stroke:var(--text-muted); stroke-width:2; stroke-linecap:round;
     pointer-events:none;
   }
   .search input{
     width:100%;
-    padding:10px 14px 10px 32px;
+    padding:10px 14px 10px 38px;
     font:inherit;
     font-size:.9rem;
     color:var(--text);
@@ -698,18 +675,15 @@
 
   <section class="next" id="nextBox" aria-label="Next closure"></section>
 
-  <div class="provenance">
-    <span id="sourceInfo"></span>
-    <span class="actions">
-      <a class="btn btn-primary" id="icsBtn" href="/calendar.ics">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>Subscribe in Calendar
-      </a>
-    </span>
+  <div class="actions">
+    <a class="btn btn-primary" id="icsBtn" href="/calendar.ics">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>Subscribe in Calendar
+    </a>
   </div>
 
   <div class="toolbar">
     <div class="search">
-      <span class="ico" aria-hidden="true">&#9906;</span>
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>
       <label class="visually-hidden" for="search">Search closures</label>
       <input type="search" id="search" placeholder="Search spring break, inservice&hellip;"
              autocomplete="off" spellcheck="false">
@@ -728,6 +702,8 @@
       <li><span class="sk sk-date"></span><span class="sk sk-line sk-w40" style="flex:1"></span></li>
     </ul>
   </div>
+
+  <p class="source" id="sourceInfo"></p>
 
   <section class="card" id="notes" hidden></section>
 
@@ -1136,8 +1112,8 @@ function renderSource(){
         {month: '2-digit', day: '2-digit', year: 'numeric'}))}`);
     }
   }
-  // Repeated from the About section on purpose: this line is the one people
-  // read, and the disclaimer should not depend on scrolling to find it.
+  // Repeated from the About section on purpose: this block is read far more
+  // often than About is opened.
   bits.push('Not affiliated with or endorsed by Hays USD 489.');
 
   // The crawl time sits with the disclaimer instead of in the masthead: it
