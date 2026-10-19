@@ -277,8 +277,15 @@ def parse_pdf(pdf_bytes: bytes, *, log=lambda _msg: None) -> dict:
         # "(Full Day HMS/HHS---1/2 Day Elementary)" continues the line above it.
         if text.startswith("(") and last_group:
             extra = _dashes(text)
-            for ev in last_group:
-                ev["title"] = f"{ev['title']} {extra}"
+            # Every copy of those days under that title, not just the previous
+            # line's own: an earlier overlapping line ("15-19 Spring Break",
+            # then "15-16 Spring Break") leaves duplicates that would otherwise
+            # keep the short title and survive the dedupe below as a second
+            # entry for the same day.
+            keys = {(ev["date"], ev["title"]) for ev in last_group}
+            for ev in events:
+                if (ev["date"], ev["title"]) in keys:
+                    ev["title"] = f"{ev['title']} {extra}"
             last_group = []
             continue
 
