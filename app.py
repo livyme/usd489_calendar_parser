@@ -89,6 +89,16 @@ ALLOW_INSECURE_ADMIN = _env_flag("ALLOW_INSECURE_ADMIN")
 
 CACHE_FILE = CACHE_DIR / "calendar.json"
 
+# Same icon as the <link rel="icon"> in static/index.html, inline for the same
+# reason: without one the browser asks for /favicon.ico and gets a 404.
+FAVICON = (
+    "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E"
+    "%3Crect width='32' height='32' rx='7' fill='%238c1d1d'/%3E"
+    "%3Cg fill='none' stroke='%23fff' stroke-width='2.2' stroke-linecap='round'%3E"
+    "%3Crect x='7' y='9' width='18' height='16' rx='2'/%3E"
+    "%3Cpath d='M12 6v5M20 6v5M7 14h18'/%3E%3C/g%3E%3C/svg%3E"
+)
+
 
 def log(message: str) -> None:
     print(message, file=sys.stderr, flush=True)
@@ -451,6 +461,7 @@ class Handler(BaseHTTPRequestHandler):
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Admin — USD 489 Closures</title>
+<link rel="icon" href="{FAVICON}">
 <style>
   /* Values mirror the design tokens in static/index.html -- deliberately
      copied rather than shared, because that page is served as immutable
