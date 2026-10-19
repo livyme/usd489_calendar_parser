@@ -113,6 +113,15 @@
 
   a{color:var(--accent-text);text-decoration:none;}
   a:hover{text-decoration:underline;text-underline-offset:2px;}
+  /* A link inside running text is underlined at rest, not only on hover:
+     colour alone does not set it apart from the words around it (1.19:1
+     against --text-soft), and WCAG asks for 3:1 or a non-colour cue. */
+  p a, li a, .prov-line a{
+    text-decoration:underline;
+    text-decoration-thickness:1px;
+    text-underline-offset:2px;
+  }
+  p a:hover, li a:hover, .prov-line a:hover{text-decoration-thickness:2px;}
 
   :focus-visible{
     outline:2px solid var(--ring);
