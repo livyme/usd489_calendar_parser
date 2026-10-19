@@ -1285,9 +1285,10 @@ function renderAbout(){
   if(meta.pdfUrl) document.getElementById('aboutPdfLink').href = meta.pdfUrl;
 }
 
-function showBanner(msg){
+/* Takes markup, not text: the only caller passes a fixed sentence and link. */
+function showBanner(html){
   document.getElementById('bannerSlot').innerHTML =
-    `<div class="banner"><span aria-hidden="true">&#9888;</span><span>${esc(msg)}</span></div>`;
+    `<div class="banner"><span aria-hidden="true">&#9888;</span><span>${html}</span></div>`;
 }
 const clearBanner = () => { document.getElementById('bannerSlot').innerHTML = ''; };
 
@@ -1384,12 +1385,17 @@ async function load(){
     clearBanner();
     renderAll();
   }catch(err){
-    document.getElementById('list').innerHTML =
-      '<p class="empty">Could not load the calendar.</p>';
-    document.getElementById('nextBox').innerHTML =
-      '<div><p class="next-label">Unavailable</p><p class="next-title">No calendar data</p></div>';
+    // Said once, in words a parent can act on. The parser's reason belongs to
+    // whoever runs the site, so it goes to the console instead of the page.
+    console.error('Calendar data did not load:', err);
+    document.getElementById('nextBox').hidden = true;
+    document.getElementById('glanceBox').hidden = true;
+    document.querySelector('.toolbar').hidden = true;
+    document.getElementById('list').innerHTML = '';
     document.getElementById('sourceInfo').textContent = '';
-    showBanner(`Could not load calendar data: ${err.message}`);
+    showBanner('The calendar couldn\u2019t load just now. Try again in a few minutes, '
+      + 'or check the <a href="https://www.usd489.com/" target="_blank" rel="noopener">'
+      + 'district\u2019s website</a> for closures.');
   }
 }
 
