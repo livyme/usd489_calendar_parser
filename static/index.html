@@ -329,11 +329,9 @@
     transition:border-color var(--speed), box-shadow var(--speed);
   }
   .search input::placeholder{color:var(--text-muted);}
-  .search input:focus{
-    outline:none;
-    border-color:var(--accent);
-    box-shadow:0 0 0 3px var(--accent-soft);
-  }
+  /* The global :focus-visible outline does the work. The old replacement, an
+     --accent-soft halo, was 1.14:1 against the surface: invisible. */
+  .search input:focus{border-color:var(--accent);}
 
   .segmented{
     display:inline-flex;
