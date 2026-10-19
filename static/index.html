@@ -275,7 +275,7 @@
   .btn:active:not(:disabled){transform:translateY(1px);}
   /* Shared by the Subscribe button and the theme toggle. flex:none so a flex
      row cannot squash an unsized inline svg to nothing. */
-  .btn svg, .segmented-icon svg{
+  .btn svg, .theme-switch svg{
     width:15px; height:15px; flex:none; display:block;
     fill:none; stroke:currentColor; stroke-width:1.9;
     stroke-linecap:round; stroke-linejoin:round;
@@ -363,12 +363,46 @@
     color:var(--text);
     box-shadow:var(--shadow);
   }
-  .segmented-icon button{
-    padding:6px 9px;
+  /* One switch: on is dark. With no stored choice it follows the OS. */
+  .theme-switch{
     display:inline-flex;
     align-items:center;
-    justify-content:center;
+    gap:7px;
+    padding:5px 6px 5px 10px;
+    font:inherit;
+    font-size:.8rem;
+    font-weight:500;
+    color:var(--text-soft);
+    background:var(--surface-sunken);
+    border:1px solid var(--border);
+    border-radius:var(--radius-pill);
+    cursor:pointer;
   }
+  .theme-switch:hover{color:var(--text);}
+  /* Off is --text-muted, not a border tint, so the track holds the 3:1 a
+     control's state needs against the surface (4.9:1 light, 5.1:1 dark). */
+  .theme-switch .track{
+    position:relative;
+    width:30px;
+    height:18px;
+    flex:none;
+    border-radius:var(--radius-pill);
+    background:var(--text-muted);
+    transition:background var(--speed);
+  }
+  .theme-switch .thumb{
+    position:absolute;
+    top:2px;
+    left:2px;
+    width:14px;
+    height:14px;
+    border-radius:50%;
+    background:var(--surface);
+    box-shadow:0 1px 2px rgba(0,0,0,.25);
+    transition:transform var(--speed);
+  }
+  .theme-switch[aria-checked="true"] .track{background:var(--accent);}
+  .theme-switch[aria-checked="true"] .thumb{transform:translateX(12px);}
 
   /* ---- list ------------------------------------------------------------ */
   .month{
@@ -707,20 +741,11 @@
       <h1>Hays USD 489 Closures</h1>
       <span class="year" id="yearLabel"></span>
     </div>
-    <div class="segmented segmented-icon" id="themeToggle" role="group" aria-label="Colour theme">
-      <button type="button" data-theme-choice="light" aria-pressed="false" title="Light theme">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M19.1 4.9l-1.8 1.8M6.7 17.3l-1.8 1.8"/></svg>
-        <span class="visually-hidden">Light</span>
-      </button>
-      <button type="button" data-theme-choice="system" aria-pressed="true" title="Match system">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="4" width="19" height="13" rx="2"/><path d="M8.5 21h7M12 17v4"/></svg>
-        <span class="visually-hidden">Match system</span>
-      </button>
-      <button type="button" data-theme-choice="dark" aria-pressed="false" title="Dark theme">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 14.5A8.5 8.5 0 0 1 9.5 3.5a8.5 8.5 0 1 0 11 11z"/></svg>
-        <span class="visually-hidden">Dark</span>
-      </button>
-    </div>
+    <button type="button" class="theme-switch" id="themeToggle" role="switch" aria-checked="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 14.5A8.5 8.5 0 0 1 9.5 3.5a8.5 8.5 0 1 0 11 11z"/></svg>
+      <span>Dark mode</span>
+      <span class="track" aria-hidden="true"><span class="thumb"></span></span>
+    </button>
   </header>
 
   <main>
@@ -1283,37 +1308,46 @@ async function load(){
 
 /* ---- theme ------------------------------------------------------------ */
 const systemDark = window.matchMedia('(prefers-color-scheme: dark)');
+const themeSwitch = document.getElementById('themeToggle');
 
-function applyTheme(pref){
-  const resolved = pref === 'system' ? (systemDark.matches ? 'dark' : 'light') : pref;
+/* themePref is "light", "dark", or "system" for no stored choice -- the same
+   values the inline <head> script sets before first paint. */
+function applyTheme(){
   const root = document.documentElement;
+  const pref = root.dataset.themePref;
+  const resolved = (pref === 'light' || pref === 'dark')
+    ? pref : (systemDark.matches ? 'dark' : 'light');
   root.dataset.theme = resolved;
-  root.dataset.themePref = pref;
 
   // Keep the browser chrome (iOS status bar, Android toolbar) in step.
   const meta = document.getElementById('themeColor');
   if(meta && window.__themeBg) meta.setAttribute('content', window.__themeBg[resolved]);
 
-  document.querySelectorAll('#themeToggle button').forEach(b=>{
-    b.setAttribute('aria-pressed', String(b.dataset.themeChoice === pref));
-  });
+  themeSwitch.setAttribute('aria-checked', String(resolved === 'dark'));
 }
 
-function setTheme(pref){
-  try{ localStorage.setItem('theme', pref); }catch(e){ /* private mode: session only */ }
-  applyTheme(pref);
+/* Flipping the switch to whatever the OS already says forgets the stored
+   choice rather than recording it, so the page goes back to following the
+   OS -- otherwise there would be no way back to that default. */
+function setDark(on){
+  const want = on ? 'dark' : 'light';
+  const pref = want === (systemDark.matches ? 'dark' : 'light') ? 'system' : want;
+  try{
+    if(pref === 'system') localStorage.removeItem('theme');
+    else localStorage.setItem('theme', pref);
+  }catch(e){ /* private mode: session only */ }
+  document.documentElement.dataset.themePref = pref;
+  applyTheme();
 }
 
-document.querySelectorAll('#themeToggle button').forEach(btn=>{
-  btn.addEventListener('click', ()=>setTheme(btn.dataset.themeChoice));
+themeSwitch.addEventListener('click', () => {
+  setDark(document.documentElement.dataset.theme !== 'dark');
 });
 
-// Only track the OS while the user is on "system".
-systemDark.addEventListener('change', ()=>{
-  if(document.documentElement.dataset.themePref === 'system') applyTheme('system');
-});
+// A stored choice wins; with none, follow the OS as it changes.
+systemDark.addEventListener('change', applyTheme);
 
-applyTheme(document.documentElement.dataset.themePref || 'system');
+applyTheme();
 
 /* ---- events ----------------------------------------------------------- */
 document.querySelectorAll('#filterToggle button').forEach(btn=>{
