@@ -831,7 +831,7 @@
 <!-- calendar-data -->
 <script>
 const PILL = {
-  holiday:"No school", inservice:"Inservice", conf:"P/T Conf",
+  holiday:"No school", inservice:"Inservice", conf:"Conferences",
   recess:"Recess", milestone:"Milestone"
 };
 
@@ -849,6 +849,19 @@ const state = { data:null, filter:'upcoming', query:'',
                 expanded:new Set(), expandedSeeded:false };
 
 const pillLabel = e => PILL[e.tag] || (e.noSchool ? 'No school' : 'Note');
+
+/* The district's shorthand, spelled out for the page only. The feed keeps the
+   PDF's own wording, because its event UIDs are derived from the title and a
+   new title would make every subscriber's calendar delete and re-add them. */
+const SPELLED_OUT = [[/\bP\/T\s*Conf(erences?)?\b\.?/i, 'Parent-Teacher Conferences']];
+function forDisplay(data){
+  const events = data.events.map(e => {
+    let title = e.title;
+    for(const [re, full] of SPELLED_OUT) title = title.replace(re, full);
+    return title === e.title ? e : {...e, title, sourceTitle: e.title};
+  });
+  return {...data, events};
+}
 
 function byTitle(events){
   const groups = new Map();
@@ -1032,7 +1045,9 @@ function renderList(){
 
   let items = events.filter(e=>{
     if(state.filter==='upcoming' && parseDate(e.date) < today) return false;
-    if(q && !(e.title.toLowerCase().includes(q) || pillLabel(e).toLowerCase().includes(q))) return false;
+    // Matches the PDF's wording too, so a search for "P/T" still finds them.
+    const said = [e.title, e.sourceTitle || '', pillLabel(e)].join(' ').toLowerCase();
+    if(q && !said.includes(q)) return false;
     return true;
   }).map(e=>({...e, d:parseDate(e.date)}));
 
@@ -1342,12 +1357,12 @@ function embeddedData(){
 
 async function load(){
   const embedded = embeddedData();
-  if(embedded){ state.data = embedded; renderAll(); return; }
+  if(embedded){ state.data = forDisplay(embedded); renderAll(); return; }
   try{
     const r = await fetch('/api/calendar', {headers:{Accept:'application/json'}});
     const body = await r.json();
     if(!r.ok) throw new Error(body.error || `HTTP ${r.status}`);
-    state.data = body;
+    state.data = forDisplay(body);
     clearBanner();
     renderAll();
   }catch(err){
