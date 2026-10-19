@@ -372,6 +372,7 @@
   /* ---- list ------------------------------------------------------------ */
   .month{
     position:relative;
+    margin:0;
     font-size:.7rem;
     font-weight:650;
     letter-spacing:.09em;
@@ -721,6 +722,7 @@
     </div>
   </header>
 
+  <main>
   <div id="bannerSlot" aria-live="polite"></div>
 
   <section class="next" id="nextBox" aria-label="Next closure"></section>
@@ -801,6 +803,7 @@
 
     <p class="disclaimer">This is an unofficial personal project and not affiliated with or endorsed by Hays USD 489. The district's PDF is always authoritative &mdash; if something here disagrees with it, <a id="aboutPdfLink" href="https://www.usd489.com/" target="_blank" rel="noopener">trust the PDF</a>. <span id="retrievedLine"></span></p>
   </details>
+  </main>
 
   <footer>
     <p id="footerSource"></p>
@@ -1046,7 +1049,8 @@ function renderList(){
     const at = run.items[0].d;
     const key = at.getFullYear()+'-'+at.getMonth();
     if(key !== monthKey){
-      const h = document.createElement('div');
+      // A heading, so a screen reader can jump month to month.
+      const h = document.createElement('h2');
       h.className = 'month';
       h.textContent = fmtMonthYear(at);
       host.appendChild(h);
