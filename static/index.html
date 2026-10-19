@@ -196,6 +196,9 @@
     color:var(--accent-text);
     font-variant-numeric:tabular-nums;
   }
+  /* "Today" / "Tomorrow" are much wider than a number, and at the number's
+     size "Tomorrow" overflows the desktop side column. */
+  .next-count .n.word{font-size:clamp(2.6rem,10vw,3.4rem);letter-spacing:-0.04em;}
   .next-count .u{font-size:1rem;font-weight:500;color:var(--text-soft);}
   .next-title{
     margin:0;
@@ -1143,11 +1146,15 @@ function renderNext(){
   const n = dayDiff(today, next.d);
   const span = rangeLabel(next);
 
+  // A closure today or tomorrow is named in words: "1 day away" makes the
+  // reader do the arithmetic the evening before, which is exactly when it is
+  // being checked.
+  const label = n === 0 ? 'No school today' : n === 1 ? 'No school tomorrow' : 'Next day off';
   box.innerHTML = `
-    <p class="next-label">Next day off</p>
+    <p class="next-label">${label}</p>
     <div class="next-count">
-      <span class="n">${n===0 ? 'Today' : n}</span>
-      <span class="u">${n===0 ? '' : (n===1 ? 'day away' : 'days away')}</span>
+      <span class="n${n <= 1 ? ' word' : ''}">${n === 0 ? 'Today' : n === 1 ? 'Tomorrow' : n}</span>
+      ${n > 1 ? '<span class="u">days away</span>' : ''}
     </div>
     <div>
       <p class="next-title">${esc(next.title)}</p>
