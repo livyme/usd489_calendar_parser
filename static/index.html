@@ -118,7 +118,15 @@
   @media (min-width:1000px){
     .wrap{max-width:72rem;}
     .layout{display:grid;grid-template-columns:22rem minmax(0,1fr);gap:56px;align-items:start;}
-    .side{position:sticky;top:24px;}
+    /* Capped at the window and scrollable on its own: with the year view
+       open the column is ~712px, and on a shorter window the bottom of it
+       stayed out of reach until the page itself ran out. The 4px padding
+       keeps focus outlines from being clipped by the overflow. */
+    .side{
+      position:sticky;top:24px;
+      max-height:calc(100vh - 48px);overflow-y:auto;overscroll-behavior:contain;
+      padding:4px;margin:-4px;scrollbar-width:thin;
+    }
   }
 
   a{color:var(--accent-text);text-decoration:none;}
