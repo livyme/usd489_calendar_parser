@@ -209,7 +209,9 @@ def parse_pdf(pdf_bytes: bytes) -> dict:
     events: list[dict] = []
     notes: list[str] = []
     current_month: int | None = None
-    last_event: dict | None = None
+    # Every day the previous legend line produced, so a continuation line can
+    # extend all of them rather than only the first.
+    last_group: list[dict] = []
 
     for line in lines:
         text = " ".join(line.split())
@@ -219,7 +221,7 @@ def parse_pdf(pdf_bytes: bytes) -> dict:
         upper = text.upper()
         if upper in MONTH_NUM and text.isupper():
             current_month = MONTH_NUM[upper]
-            last_event = None
+            last_group = []
             continue
 
         m = DAYSPEC_RE.match(text)
@@ -252,7 +254,7 @@ def parse_pdf(pdf_bytes: bytes) -> dict:
 
             # Whatever survives may no longer be one span, so the range is
             # rebuilt per contiguous stretch instead of echoing the legend's.
-            group = []
+            last_group = []
             for run in _contiguous(dates):
                 for day in run:
                     ev = {
@@ -264,17 +266,15 @@ def parse_pdf(pdf_bytes: bytes) -> dict:
                     if len(run) > 1:
                         ev["range"] = f"{run[0].isoformat()}/{run[-1].isoformat()}"
                     events.append(ev)
-                    group.append(ev)
-            last_event = group[0] if group else None
+                    last_group.append(ev)
             continue
 
         # "(Full Day HMS/HHS---1/2 Day Elementary)" continues the line above it.
-        if text.startswith("(") and last_event is not None:
+        if text.startswith("(") and last_group:
             extra = _dashes(text)
-            for ev in events:
-                if ev["date"] == last_event["date"] and ev["title"] == last_event["title"]:
-                    ev["title"] = f"{ev['title']} {extra}"
-            last_event = None
+            for ev in last_group:
+                ev["title"] = f"{ev['title']} {extra}"
+            last_group = []
             continue
 
         # Free-standing prose such as "Floating Workday for teachers Dec 21-Jan 3".

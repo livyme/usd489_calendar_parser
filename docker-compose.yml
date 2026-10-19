@@ -12,7 +12,7 @@ services:
     working_dir: /app
     command: uv run python app.py
     environment:
-      HOST: 0.0.0.0
+      HOST: 127.0.0.1
       PORT: "8489"
       CACHE_DIR: /data
       # No Cloudflare Access in front locally, and /admin/ fails closed without
