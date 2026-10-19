@@ -12,7 +12,10 @@ services:
     working_dir: /app
     command: uv run python app.py
     environment:
-      HOST: 127.0.0.1
+      # The server has to listen on every interface *inside* the container, or
+      # the port mapping cannot reach it; keeping it off the network is the
+      # job of the host side of the mapping below.
+      HOST: 0.0.0.0
       PORT: "8489"
       CACHE_DIR: /data
       # No Cloudflare Access in front locally, and /admin/ fails closed without
@@ -31,8 +34,10 @@ services:
       - venv:/venv
       - uv-cache:/root/.cache/uv
       - data:/data
+    # Published on the Mac's loopback only. ALLOW_INSECURE_ADMIN is set above,
+    # so on 0.0.0.0 anyone on the same network could trigger a crawl.
     ports:
-      - "8489:8489"
+      - "127.0.0.1:8489:8489"
 
   # The actual image that ships to k8s, for a pre-push smoke test.
   calendar-image:
@@ -47,7 +52,7 @@ services:
     volumes:
       - data-image:/data
     ports:
-      - "8490:8489"
+      - "127.0.0.1:8490:8489"
 
 volumes:
   venv:
