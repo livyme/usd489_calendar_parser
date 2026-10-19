@@ -106,7 +106,9 @@ reads as "not an admin" and leaves the button hidden.
 
 **Refreshes are throttled regardless.** `MIN_REFRESH_INTERVAL` (default 300s)
 caps how often a crawl can actually happen, and a single-flight lock means
-concurrent clicks cannot stampede. Repeat attempts get `429` with `Retry-After`
+concurrent clicks cannot stampede. Failed attempts count too: a refresh that
+errors has still reached usd489.com, so it starts the interval like a
+successful one. Repeat attempts get `429` with `Retry-After`
 rather than hitting the district's site. That is deliberately independent of
 who is asking, so a misconfigured policy cannot turn into a crawl loop.
 

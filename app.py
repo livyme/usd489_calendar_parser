@@ -169,6 +169,10 @@ class CalendarStore:
             wait = self.retry_after()
             if wait:
                 raise Throttled(wait)
+            # Stamped before crawling, not after succeeding: a failed refresh
+            # still reached usd489.com, and it is exactly when the site or the
+            # PDF is broken that someone keeps pressing the button.
+            self._last_refresh = time.monotonic()
             data, _pdf = calendar_source.fetch_calendar(log=log)
             try:
                 CACHE_DIR.mkdir(parents=True, exist_ok=True)
@@ -184,7 +188,6 @@ class CalendarStore:
             with self._lock:
                 self._data = data
                 self._source = origin
-            self._last_refresh = time.monotonic()
             return data
         finally:
             self._refresh_lock.release()
