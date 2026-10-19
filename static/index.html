@@ -287,6 +287,9 @@
   }
   .glance > summary::-webkit-details-marker{display:none;}
   .glance > summary .hint-tap{font-size:.78rem;font-weight:500;color:var(--text-muted);}
+  /* "Click" where there is a mouse, "Tap" everywhere else. */
+  .say-click{display:none;}
+  @media (hover:hover) and (pointer:fine){ .say-tap{display:none;} .say-click{display:inline;} }
   .glance > summary svg{
     width:16px;height:16px;flex:none;vertical-align:-3px;fill:none;stroke:var(--text-muted);
     stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;transition:transform var(--speed);
@@ -757,7 +760,7 @@
   </div>
 
   <details class="glance" id="glanceBox">
-    <summary><span>The year at a glance</span><span class="hint-tap">Tap a day to find it
+    <summary><span>The year at a glance</span><span class="hint-tap"><span class="say-tap">Tap</span><span class="say-click">Click</span> a day to find it
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span></summary>
     <div class="glance-body">
       <div class="glance-grid" id="glance"></div>
