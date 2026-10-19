@@ -37,6 +37,7 @@ from __future__ import annotations
 
 import html
 import json
+import math
 import os
 import signal
 import sys
@@ -52,6 +53,11 @@ import ical_feed
 
 ROOT = Path(__file__).resolve().parent
 
+
+def _env_flag(name: str) -> bool:
+    return os.environ.get(name, "").lower() in ("1", "true", "yes")
+
+
 HOST = os.environ.get("HOST", "0.0.0.0")
 PORT = int(os.environ.get("PORT", "8489"))
 CACHE_DIR = Path(os.environ.get("CACHE_DIR", ROOT / "cache"))
@@ -59,7 +65,7 @@ SEED_FILE = Path(os.environ.get("SEED_FILE", ROOT / "seed" / "calendar.json"))
 STATIC_DIR = Path(os.environ.get("STATIC_DIR", ROOT / "static"))
 # Off by default: a restarted pod should serve its cache instantly rather than
 # waiting on someone else's website. Turn on if you want startup to re-crawl.
-REFRESH_ON_START = os.environ.get("REFRESH_ON_START", "").lower() in ("1", "true", "yes")
+REFRESH_ON_START = _env_flag("REFRESH_ON_START")
 
 # Floor on how often a refresh may actually crawl usd489.com. This is not the
 # access control -- Cloudflare Access is -- but it bounds the damage if /admin/
@@ -79,11 +85,7 @@ ACCESS_EMAIL_HEADER = "Cf-Access-Authenticated-User-Email"
 
 # Escape hatch for local development, where there is no Access in front. Never
 # set this on a deployment reachable from the internet.
-ALLOW_INSECURE_ADMIN = os.environ.get("ALLOW_INSECURE_ADMIN", "").lower() in (
-    "1",
-    "true",
-    "yes",
-)
+ALLOW_INSECURE_ADMIN = _env_flag("ALLOW_INSECURE_ADMIN")
 
 CACHE_FILE = CACHE_DIR / "calendar.json"
 
@@ -154,7 +156,7 @@ class CalendarStore:
         if MIN_REFRESH_INTERVAL <= 0 or not self._last_refresh:
             return 0
         elapsed = time.monotonic() - self._last_refresh
-        return max(0, int(MIN_REFRESH_INTERVAL - elapsed) + 1) if elapsed < MIN_REFRESH_INTERVAL else 0
+        return max(0, math.ceil(MIN_REFRESH_INTERVAL - elapsed))
 
     def refresh(self) -> dict:
         """Re-crawl and persist. Raises CalendarError, leaving old data intact."""
@@ -247,8 +249,13 @@ class Handler(BaseHTTPRequestHandler):
         return bool(self._admin_identity()) or ALLOW_INSECURE_ADMIN
 
     # -- routing -----------------------------------------------------------
+    def _route(self) -> str:
+        # Not urlsplit(): it reads "//x/admin/refresh" as host x plus path
+        # /admin/refresh, routing a path the edge policy never matched.
+        return self.path.split("?", 1)[0].rstrip("/") or "/"
+
     def do_GET(self) -> None:  # noqa: N802
-        route = self.path.split("?", 1)[0].rstrip("/") or "/"
+        route = self._route()
 
         if route == "/":
             return self._serve_shell()
@@ -286,7 +293,7 @@ class Handler(BaseHTTPRequestHandler):
         self.do_GET()
 
     def do_POST(self) -> None:  # noqa: N802
-        route = self.path.split("?", 1)[0].rstrip("/") or "/"
+        route = self._route()
         if route != "/admin/refresh":
             return self._json(HTTPStatus.NOT_FOUND, {"error": f"no route for {route}"})
 
