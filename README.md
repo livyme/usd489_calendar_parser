@@ -12,7 +12,7 @@ Public:
 
 | Route | Purpose |
 | --- | --- |
-| `GET /` | the closures page (renders client-side from the API) |
+| `GET /` | the closures page, with the calendar JSON embedded in it |
 | `GET /api/calendar` | parsed calendar + provenance, as JSON |
 | `GET /calendar.ics` | iCalendar feed for calendar subscriptions |
 | `GET /healthz` | liveness — the process is up |
@@ -251,7 +251,9 @@ poller. At startup the app loads, in order of preference:
 data even if usd489.com is down. usd489.com is contacted only when someone calls
 `POST /admin/refresh` — via the Refresh button on `/admin`, or directly — not on page
 load, not on a timer, not per visitor. The public calendar page ships no admin controls
-and makes exactly two requests of its own: `GET /` and `GET /api/calendar`.
+and makes one request of its own: `GET /`, which carries the calendar data with it. The
+page renders the full list from that on first paint, so nothing jumps when the data
+arrives; it falls back to fetching `/api/calendar` only if nothing was embedded.
 
 To refresh the seed baked into the image:
 
@@ -323,7 +325,7 @@ A failed refresh surfaces the error in the UI and returns `502` from
 app.py                 HTTP service: routes, in-memory store, disk cache
 calendar_source.py     crawl + parse (importable; also a CLI for seeding)
 ical_feed.py           RFC 5545 feed rendering
-static/index.html      UI shell (inline CSS/JS, renders from /api/calendar)
+static/index.html      the page (inline CSS/JS; app.py embeds the data in it)
 seed/calendar.json     seed cache baked into the image
 k8s/                   Deployment, ClusterIP Service and a NetworkPolicy
                        restricting ingress to k-cloudflare (ns l-usd489-calendar)

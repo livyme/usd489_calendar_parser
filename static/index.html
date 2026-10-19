@@ -812,6 +812,7 @@
   </footer>
 </div>
 
+<!-- calendar-data -->
 <script>
 const PILL = {
   holiday:"No school", inservice:"Inservice", conf:"P/T Conf",
@@ -1250,7 +1251,19 @@ function renderAll(){
 }
 
 /* ---- data ------------------------------------------------------------- */
+/* app.py embeds the same payload /api/calendar serves, so the first render
+   needs no round-trip and nothing below the list moves when it arrives. The
+   fetch stays for when there is nothing embedded -- no data loaded yet, or
+   the file opened some other way. */
+function embeddedData(){
+  const el = document.getElementById('calendarData');
+  if(!el) return null;
+  try{ return JSON.parse(el.textContent); }catch{ return null; }
+}
+
 async function load(){
+  const embedded = embeddedData();
+  if(embedded){ state.data = embedded; renderAll(); return; }
   try{
     const r = await fetch('/api/calendar', {headers:{Accept:'application/json'}});
     const body = await r.json();

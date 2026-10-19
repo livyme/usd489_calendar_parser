@@ -4,7 +4,7 @@
 Routes
 ------
 Public:
-  GET  /                UI shell (renders client-side from /api/calendar)
+  GET  /                the page, with the calendar JSON embedded in it
   GET  /api/calendar    parsed calendar + provenance, as JSON
   GET  /calendar.ics    iCalendar feed for phone/desktop calendar subscriptions
   GET  /healthz         liveness: process is up
@@ -100,6 +100,26 @@ FAVICON = (
 )
 
 
+# Where static/index.html wants the calendar JSON. The page renders from it
+# directly, so the first paint is the full list rather than a placeholder that
+# the list then shoves down the page.
+DATA_MARKER = b"<!-- calendar-data -->"
+
+
+def _embed_json(payload: dict) -> bytes:
+    """Serialise for a <script type="application/json"> element.
+
+    Titles come from the district's PDF, and one containing "</script>" or
+    "<!--" would end or derail the element. \\u003c is the same character to
+    JSON.parse and no longer markup to the HTML parser; ensure_ascii already
+    escapes U+2028/2029.
+    """
+    text = json.dumps(payload)
+    for ch, esc in (("<", "\\u003c"), (">", "\\u003e"), ("&", "\\u0026")):
+        text = text.replace(ch, esc)
+    return text.encode()
+
+
 def log(message: str) -> None:
     print(message, file=sys.stderr, flush=True)
 
@@ -159,6 +179,13 @@ class CalendarStore:
     @property
     def ready(self) -> bool:
         return bool(self.data)
+
+    def payload(self) -> dict | None:
+        """What /api/calendar serves, and what the page embeds."""
+        data = self.data
+        if not data:
+            return None
+        return {**data, "cacheSource": self.source}
 
     # -- refreshing --------------------------------------------------------
     def retry_after(self) -> int:
@@ -371,20 +398,27 @@ class Handler(BaseHTTPRequestHandler):
                 HTTPStatus.INTERNAL_SERVER_ERROR,
                 {"error": f"UI shell missing at {index}"},
             )
-        # The shell is immutable per image; the data it fetches is what changes.
+        payload = STORE.payload()
+        if payload:
+            body = body.replace(
+                DATA_MARKER,
+                b'<script type="application/json" id="calendarData">'
+                + _embed_json(payload) + b"</script>",
+                1,
+            )
+        # Carries the data, so it changes on every refresh; no-cache makes each
+        # load ask again rather than show a copy from before one.
         self._send(HTTPStatus.OK, body, "text/html; charset=utf-8",
                    {"Cache-Control": "no-cache"})
 
     def _serve_json_calendar(self) -> None:
-        data = STORE.data
-        if not data:
+        payload = STORE.payload()
+        if not payload:
             return self._json(
                 HTTPStatus.SERVICE_UNAVAILABLE,
                 {"error": "no calendar data loaded yet; POST /admin/refresh"},
                 self._no_store(),
             )
-        payload = dict(data)
-        payload["cacheSource"] = STORE.source
         self._json(HTTPStatus.OK, payload, self._no_store())
 
     def _refresh_outcome(self) -> str:

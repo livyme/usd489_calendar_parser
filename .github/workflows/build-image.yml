@@ -107,6 +107,8 @@ jobs:
           # and started failing when it grew past ~47 KB.
           curl -fsS http://127.0.0.1:8489/ -o /tmp/index.html
           grep -q 'Hays USD 489 Closures' /tmp/index.html
+          # The page carries its own data rather than fetching it.
+          grep -q 'id="calendarData"' /tmp/index.html
           curl -fsS http://127.0.0.1:8489/api/calendar -o /tmp/cal.json
           python3 -c "
           import json
