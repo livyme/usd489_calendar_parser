@@ -197,7 +197,7 @@ def clean_title(raw: str) -> tuple[str, bool]:
     return text, False
 
 
-def parse_pdf(pdf_bytes: bytes) -> dict:
+def parse_pdf(pdf_bytes: bytes, *, log=lambda _msg: None) -> dict:
     """Parse the calendar PDF into {schoolYear, events, notes}."""
     lines, full_text = _sidebar_lines(pdf_bytes)
 
@@ -251,6 +251,11 @@ def parse_pdf(pdf_bytes: bytes) -> dict:
             # written across a weekend is the transcription shortcut.
             if len(dates) > 1 and tag in WEEKDAY_ONLY_TAGS:
                 dates = [day for day in dates if day.weekday() < 5]
+                if not dates:
+                    # The rule assumes a span merely runs over a weekend; one
+                    # that is nothing but weekend breaks that assumption, so
+                    # say so rather than let the entry vanish.
+                    log(f"[warn] dropped {text!r}: every day of it is a weekend")
 
             # Whatever survives may no longer be one span, so the range is
             # rebuilt per contiguous stretch instead of echoing the legend's.
@@ -317,7 +322,7 @@ def fetch_calendar(*, log=print) -> tuple[dict, bytes]:
     pdf_bytes, final_url, last_mod = download_pdf(link)
     log(f"[info] downloaded {len(pdf_bytes):,} bytes")
 
-    data = parse_pdf(pdf_bytes)
+    data = parse_pdf(pdf_bytes, log=log)
     data["meta"] = {
         "retrievedAt": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
         "linkLabel": label,
