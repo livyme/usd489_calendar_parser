@@ -259,6 +259,49 @@
     color:var(--on-accent);
   }
 
+  /* ---- year at a glance --------------------------------------------- */
+  /* One mini month per cell, closures coloured. Collapsed by default, so on a
+     phone the list still starts on the first screen. */
+  .glance{margin-bottom:22px;border-top:1px solid var(--border);border-bottom:1px solid var(--border);}
+  .glance > summary{
+    display:flex;align-items:center;justify-content:space-between;gap:8px;
+    padding:12px 2px;cursor:pointer;list-style:none;
+    font-size:.95rem;font-weight:650;letter-spacing:-0.01em;
+  }
+  .glance > summary::-webkit-details-marker{display:none;}
+  .glance > summary .hint-tap{font-size:.78rem;font-weight:500;color:var(--text-muted);}
+  .glance > summary svg{
+    width:16px;height:16px;flex:none;vertical-align:-3px;fill:none;stroke:var(--text-muted);
+    stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;transition:transform var(--speed);
+  }
+  .glance[open] > summary svg{transform:rotate(90deg);}
+  .glance-body{padding:4px 2px 16px;}
+  .glance-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px 12px;}
+  .gm-name{display:block;font-size:.72rem;font-weight:600;color:var(--text-soft);margin-bottom:4px;}
+  .gm-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;}
+  /* Plain days use --border, not the sunken surface, so a month reads as a
+     month rather than a few floating dots. */
+  .gm-grid > *{display:block;aspect-ratio:1;border-radius:2px;background:var(--border);}
+  .gm-grid > .pad{background:transparent;}
+  .gm-grid > .we{background:var(--surface-sunken);}
+  /* Days with an entry are buttons that jump to it in the list. */
+  .gm-grid > button{width:100%;padding:0;border:0;margin:0;cursor:pointer;font:inherit;}
+  .gm-grid > button:hover{transform:scale(1.35);position:relative;z-index:1;}
+  .gm-grid > button:focus-visible{outline:2px solid var(--ring);outline-offset:1px;border-radius:2px;}
+  .gm-grid > .t-holiday{background:var(--holiday-fg);}
+  .gm-grid > .t-inservice{background:var(--inservice-fg);}
+  .gm-grid > .t-conf{background:var(--conf-fg);}
+  .gm-grid > .t-recess{background:var(--recess-fg);}
+  .gm-grid > .t-milestone{background:var(--bg);box-shadow:inset 0 0 0 1.5px var(--milestone-fg);}
+  .gm-grid > .is-today{box-shadow:0 0 0 1.5px var(--bg), 0 0 0 3px var(--text);}
+  .glance-key{display:flex;flex-wrap:wrap;gap:6px 14px;margin:14px 0 0;padding:0;list-style:none;font-size:.75rem;color:var(--text-muted);}
+  .glance-key li{display:inline-flex;align-items:center;gap:6px;}
+  .glance-key i{width:9px;height:9px;border-radius:2px;display:inline-block;}
+  .key-holiday{background:var(--holiday-fg);}
+  .key-inservice{background:var(--inservice-fg);}
+  .key-conf{background:var(--conf-fg);}
+  .key-recess{background:var(--recess-fg);}
+
   /* ---- toolbar --------------------------------------------------------- */
   .toolbar{
     position:sticky;
@@ -400,6 +443,8 @@
     color:var(--text-muted);
     border:1px solid var(--border-strong);
   }
+  /* Where a tap on the year view lands, for a moment. */
+  .row.is-flash{background:var(--accent-soft);box-shadow:inset 3px 0 0 var(--accent);}
   .row.is-today{
     background:var(--accent-soft);
     border-bottom-color:transparent;
@@ -688,6 +733,20 @@
       <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>Subscribe in Calendar
     </a>
   </div>
+
+  <details class="glance" id="glanceBox">
+    <summary><span>The year at a glance</span><span class="hint-tap">Tap a day to find it
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span></summary>
+    <div class="glance-body">
+      <div class="glance-grid" id="glance"></div>
+      <ul class="glance-key" aria-hidden="true">
+        <li><i class="key-holiday"></i>No school</li>
+        <li><i class="key-inservice"></i>Inservice</li>
+        <li><i class="key-conf"></i>Conferences</li>
+        <li><i class="key-recess"></i>Recess</li>
+      </ul>
+    </div>
+  </details>
   </div>
 
   <div class="content">
@@ -904,6 +963,7 @@ function runDates(first, last, n){
 function dayRow(e, isChild){
   const isToday = sameDay(e.d, today);
   const li = document.createElement('li');
+  li.dataset.date = e.date;  // what the year view jumps to
   li.className = 'row'
     + (isChild ? ' is-child' : '')
     + (e.marker ? ' is-marker' : '')
@@ -1198,8 +1258,75 @@ function showBanner(msg){
 }
 const clearBanner = () => { document.getElementById('bannerSlot').innerHTML = ''; };
 
+/* ---- year at a glance ------------------------------------------------- */
+function renderGlance(){
+  const host = document.getElementById('glance');
+  const d = state.data;
+  const m = /(\d{4})\D+(\d{4})/.exec((d && d.schoolYear) || '');
+  if(!m){ document.getElementById('glanceBox').hidden = true; return; }
+  const y1 = +m[1];
+  // A no-school entry wins over a milestone on the same day.
+  const byDate = new Map();
+  for(const e of d.events){ if(!byDate.has(e.date) || e.noSchool) byDate.set(e.date, e); }
+  const pad = n => String(n).padStart(2, '0');
+  let out = '';
+  // August through July, the span the district's calendar covers.
+  for(let i = 0; i < 12; i++){
+    const first = new Date(y1, 7 + i, 1);
+    const yy = first.getFullYear(), mm = first.getMonth();
+    const days = new Date(yy, mm + 1, 0).getDate();
+    let cells = '<i class="pad"></i>'.repeat(first.getDay());
+    const off = [];
+    for(let day = 1; day <= days; day++){
+      const at = new Date(yy, mm, day);
+      const e = byDate.get(`${yy}-${pad(mm + 1)}-${pad(day)}`);
+      const cls = [];
+      if(e) cls.push('t-' + e.tag);
+      if(at.getDay() === 0 || at.getDay() === 6) cls.push('we');
+      if(sameDay(at, today)) cls.push('is-today');
+      if(e && e.noSchool) off.push(day);
+      if(e){
+        const what = `${at.toLocaleString('en-US',{weekday:'short', month:'short', day:'numeric'})}: ${e.title}`;
+        cells += `<button type="button" class="${cls.join(' ')}" data-date="${e.date}" aria-label="${esc(what)}" title="${esc(what)}"></button>`;
+      }else{
+        cells += `<i class="${cls.join(' ')}"></i>`;
+      }
+    }
+    const label = `${fmtMonthYear(first)}: ${off.length ? 'no school on the ' + off.join(', ') : 'no closures'}`;
+    out += `<div class="gm" role="group" aria-label="${esc(label)}"><span class="gm-name" aria-hidden="true">${fmtMonShort(first)}</span><div class="gm-grid">${cells}</div></div>`;
+  }
+  host.innerHTML = out;
+}
+
+/* Show a date in the list: widen the filter or clear a search that hides it,
+   open the multi-day row it sits in, then scroll to it, highlight it briefly
+   and move focus there so a keyboard or screen-reader user lands on it too. */
+function jumpTo(date){
+  if(state.filter === 'upcoming' && parseDate(date) < today){
+    document.querySelector('#filterToggle [data-filter="all"]').click();
+  }
+  if(state.query && !document.querySelector(`#list li[data-date="${date}"]`)){
+    document.getElementById('search').value = '';
+    state.query = '';
+    renderList();
+  }
+  const row = document.querySelector(`#list li[data-date="${date}"]`);
+  if(!row) return;
+  if(row.hidden){
+    let run = row.previousElementSibling;
+    while(run && !run.classList.contains('row-run')) run = run.previousElementSibling;
+    if(run) run.querySelector('.row-hit').click();
+  }
+  const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  row.scrollIntoView({block:'center', behavior: still ? 'auto' : 'smooth'});
+  row.tabIndex = -1;
+  row.focus({preventScroll:true});
+  row.classList.add('is-flash');
+  setTimeout(() => row.classList.remove('is-flash'), 2200);
+}
+
 function renderAll(){
-  renderMeta(); renderSource(); renderNext(); renderNotes(); renderAbout(); renderList();
+  renderMeta(); renderSource(); renderNext(); renderGlance(); renderNotes(); renderAbout(); renderList();
 }
 
 /* ---- data ------------------------------------------------------------- */
@@ -1284,6 +1411,11 @@ document.querySelectorAll('#filterToggle button').forEach(btn=>{
     state.filter = btn.dataset.filter;
     renderList();
   });
+});
+
+document.getElementById('glance').addEventListener('click', ev => {
+  const cell = ev.target.closest('button[data-date]');
+  if(cell) jumpTo(cell.dataset.date);
 });
 
 document.getElementById('search').addEventListener('input', e=>{
